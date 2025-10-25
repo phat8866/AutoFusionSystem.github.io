@@ -1,0 +1,3435 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoFusion System</title>
+    <link rel="icon" type="image/png" href="https://sf-static.upanhlaylink.com/view/image_20251022a67356d236e5077de5805e882ca59efa.jpg">
+
+    <style>
+  /* các style cũ của bạn ở đây ... */
+
+  /* ✅ THAY THẾ/SỬA ĐỔI CHO HOME ANIMATION (Chứa Canvas Full Màn) */
+  #home-background-canvas-container { 
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -2; /* Đặt Z-index thấp nhất */
+    overflow: hidden;
+    background-color: #000000; 
+  }
+  #home-background-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  /* Fix: Bỏ thanh cuộn ngang nếu có */
+  html { overflow-x: hidden; } 
+  
+  /* Bỏ style cũ của home-animation do đã thay thế */
+  /* #home-animation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center, #0a0a16 0%, #000000 100%);
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  } */
+</style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://docs.google.com/spreadsheets/d/13Wo_G-sTID-ZWfU8sSe2brgVsHhCgFpKWTrWcXROgBI/edit?gid=0#gid=0" rel="stylesheet">
+    <style>
+        /* CSS GỐC VÀ BỔ SUNG (GIỮ NGUYÊN) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #e2e8f0;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body::-webkit-scrollbar { display: none; }
+        
+        /* HIỆU ỨNG CHỮ NGHỆ THUẬT */
+        .animated-gradient-text {
+            background: linear-gradient(90deg, #f87171, #fb923c, #facc15, #a3e635, #4ade80, #38bdf8, #a78bfa, #f472b6, #f87171);
+            background-size: 250% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            animation: gradient-flow 10s linear infinite;
+        }
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 250% 50%; }
+        }
+        .static-gradient-text {
+            background: linear-gradient(90deg, #a78bfa, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            padding-bottom: 2px;
+        }
+        .menu-link { position: relative; padding-bottom: 4px; }
+        .menu-link::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #a78bfa, #38bdf8);
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .menu-link:hover::after, .menu-link.active::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+        
+        /* LOGO AFS */
+        .afs-logo {
+            font-weight: 900;
+            font-size: 2.25rem;
+            line-height: 1;
+            letter-spacing: -0.1em;
+            color: #e5e7eb;
+            animation: afs-glow 4s ease-in-out infinite;
+        }
+        @keyframes afs-glow {
+            0%, 100% {
+                text-shadow: 1.5px 1.5px 0px rgba(56, 189, 248, 0.7), -1.5px -1.5px 0px rgba(245, 158, 11, 0.7), 0px 0px 8px rgba(255, 255, 255, 0.2);
+            }
+            50% {
+                text-shadow: -1.5px 1.5px 0px rgba(56, 189, 248, 1), 1.5px -1.5px 0px rgba(245, 158, 11, 1), 0px 0px 14px rgba(255, 255, 255, 0.4);
+            }
+        }
+        
+        /* HIỆU ỨNG TẢI TRANG (Confetti) */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #111827;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+            overflow: hidden;
+        }
+        #loading-overlay.visible { opacity: 1; visibility: visible; }
+        #loading-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
+        .loading-content { position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .loading-spinner { width: 80px; height: 80px; position: relative; margin-bottom: 24px; }
+        .loading-spinner::before, .loading-spinner::after {
+            content: ''; position: absolute; border-radius: 50%; inset: 0; border: 6px solid transparent;
+        }
+        .loading-spinner::before {
+            border-top-color: #38bdf8; border-left-color: #38bdf8;
+            animation: spin 1.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+        }
+        .loading-spinner::after {
+            border-bottom-color: #a78bfa; border-right-color: #a78bfa;
+            animation: spin 1s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite reverse;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* HIỆU ỨNG CHUNG (CẬP NHẬT CHO VIỀN ĐIỆN) */
+        .card-glow { 
+            position: relative; 
+            /* Giữ nguyên overflow: hidden cho card sản phẩm/báo cáo */
+            overflow: hidden; 
+            /* Thêm shadow mặc định */
+            box-shadow: 0 0 5px rgba(107, 114, 128, 0.1); 
+            transition: all 0.5s ease-in-out; 
+        } 
+
+        .card-glow::before {
+            content: '';
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            /* Màu sắc Viền Điện: Orange-Cyan/Purple */
+            background: conic-gradient(from 0deg at 50% 50%, #f97316 0%, #06b6d4 10%, transparent 30%, transparent 70%, #f97316 90%, #f97316 100%);
+            animation: rotate-glow 8s linear infinite;
+            opacity: 0; transition: opacity 0.5s ease-in-out; z-index: 0;
+            /* Hiệu ứng Viền Điện: Làm mờ và làm rực viền */
+            filter: blur(10px);
+        }
+
+        /* Hiệu ứng nổi bật cho REPORT CARD (áp dụng hiệu ứng viền điện mạnh mẽ) */
+        .report-card.card-glow:hover::before { 
+            opacity: 0.8; /* Tăng độ sáng viền */
+            animation: rotate-glow 5s linear infinite, electric-buzz 0.5s infinite; /* Thêm hiệu ứng rung */
+        }
+        .report-card.card-glow:hover {
+            transform: scale(1.02); /* Phóng to nhẹ khi hover */
+            box-shadow: 0 0 25px rgba(249, 115, 22, 0.6), 0 0 10px rgba(6, 182, 212, 0.6); /* Thêm shadow ngoài */
+        }
+        
+        .card-glow:hover::before { opacity: 0.2; } /* Giữ opacity mặc định cho các thành phần khác */
+        .card-glow > * { position: relative; z-index: 1; }
+        @keyframes rotate-glow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Hiệu ứng rung nhẹ cho viền điện */
+        @keyframes electric-buzz {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-1px, 1px); }
+            50% { transform: translate(1px, -1px); }
+            75% { transform: translate(-1px, -1px); }
+        }
+        
+        /* === FIX: cố định phần footer của product card (từ gạch ngang trở xuống) === */
+        .product-card {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between; /* đẩy footer xuống đáy */
+          min-height: 360px; /* bạn có thể điều chỉnh cao tổng card nếu muốn */
+        }
+
+        /* footer cố định (từ gạch ngang trở xuống) */
+        .product-card .card-footer {
+          border-top: 1px solid rgba(107,114,128,0.3); /* gạch ngang */
+          padding-top: 12px;
+          margin-top: 12px;
+          background: transparent;
+          /* đảm bảo footer không bị co cụm */
+          flex-shrink: 0;
+        }
+
+        /* đảm bảo nút/giá luôn hiển thị gọn trong footer */
+        .product-card .price-row { margin-bottom: 8px; }
+        .product-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* Ellipsis fallback (nếu không dùng plugin line-clamp của tailwind) */
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        /* nếu muốn card height tự điều chỉnh trên màn hình nhỏ */
+        @media (max-width: 640px) {
+          .product-card { min-height: 320px; }
+        }
+        
+        /* ==== [ĐÃ NÂNG CẤP] CSS CHO SƠ ĐỒ CÔNG NGHỆ ==== */
+        #hero-section { position: relative; min-height: 500px; }
+        #webgl-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; } 
+        .hero-content-wrapper { position: relative; z-index: 1; min-height: 500px; }
+
+        /* [NÂNG CẤP] HIỆU ỨNG CHO NODE CÔNG NGHỆ */
+        .tech-node {
+            position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 100px; height: 100px;
+            background-color: rgba(30, 41, 59, 0.7);
+            border: 1px solid #4a5568; border-radius: 50%;
+            backdrop-filter: blur(5px); transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); cursor: pointer;
+            animation: pulse-animation 3s infinite, float-animation 4s ease-in-out infinite; /* ✅ THÊM: Hiệu ứng trôi nổi */
+        }
+        .tech-node span {
+            transition: text-shadow 0.4s ease;
+        }
+
+        /* [NÂNG CẤP] Hiệu ứng khi hover vào Node chính */
+        .tech-node:hover, .tech-node.highlighted {
+            transform: scale(1.15); /* Tăng kích thước khi hover */
+            border-color: #a78bfa;
+            box-shadow: 0 0 25px rgba(167, 139, 250, 0.6), 0 0 10px rgba(167, 139, 250, 0.4) inset; /* Ánh sáng tỏa ra và vào trong */
+            animation-play-state: paused; /* Tạm dừng animation gốc khi hover */
+        }
+        /* [THÊM MỚI] Hiệu ứng cho chữ bên trong node khi hover */
+        .tech-node:hover span, .tech-node.highlighted span {
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+        }
+
+        /* [THÊM MỚI] Hiệu ứng cho các Node được kết nối (sáng nhẹ) */
+        .tech-node.connected {
+            border-color: rgba(167, 139, 250, 0.5);
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.2);
+        }
+
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.3); }
+            50% { box-shadow: 0 0 0 10px rgba(167, 139, 250, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.3); }
+        }
+
+        /* [THÊM MỚI] Hiệu ứng trôi nổi nhẹ nhàng */
+        @keyframes float-animation {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* [NÂNG CẤP] HIỆU ỨNG CHO ĐƯỜNG KẾT NỐI */
+        .tech-network-line {
+            stroke: #4a5568;
+            stroke-width: 1.5;
+            transition: stroke 0.4s ease-in-out, stroke-width 0.4s ease-in-out;
+        }
+
+        /* [NÂNG CẤP] Hiệu ứng DÒNG NĂNG LƯỢNG khi hover */
+        .tech-network-line.highlighted {
+            stroke: #a78bfa;
+            stroke-width: 2.5; /* Dày hơn khi active */
+            stroke-dasharray: 10 5; /* Tạo đường đứt nét (10px nét liền, 5px khoảng trống) */
+            animation: line-flow-animation 1s linear infinite;
+        }
+
+        /* [THÊM MỚI] Keyframes cho hiệu ứng dòng chảy */
+        @keyframes line-flow-animation {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: 15; } /* Dịch chuyển 15px (10 + 5) để tạo vòng lặp hoàn hảo */
+        }
+        
+        /* CSS cho Modal (Trang Mã nguồn) */
+        #product-modal { z-index: 100; }
+        /* ==== FIX FORM CARD & TEXT ==== */
+
+      /* Giới hạn chiều cao card, đồng bộ tất cả */
+      .product-card {
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      /* Phần nội dung chính co giãn hợp lý */
+      .product-card > div {
+        flex: 1 1 auto;
+      }
+
+      /* Ảnh có cùng tỉ lệ, không méo */
+      .product-card img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+      }
+
+      /* Giới hạn tiêu đề và mô tả, tránh tràn text */
+      .product-card h2,
+      .product-card h3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* tiêu đề 2 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+      }
+
+      .product-card p {
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* mô tả 3 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+      }
+
+      /* Cố định phần footer (giá + nút) ở đáy card */
+      .product-card .card-footer {
+        border-top: 1px solid rgba(107,114,128,0.3);
+        padding-top: 10px;
+        margin-top: auto;
+        background: transparent;
+        flex-shrink: 0;
+      }
+
+      /* Nút và giá không bị tràn */
+      .product-card .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      /* Tag không bị tràn */
+      .product-card span {
+        word-break: keep-all;
+        white-space: nowrap;
+      }
+
+      /* Bố cục grid các card đồng đều */
+      #products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+        align-items: stretch;
+      }
+
+      /* Fix lỗi hover làm nhảy layout */
+      .card-glow:hover::before {
+        opacity: 0.15 !important;
+      }
+      /* ==== FIX ẢNH CARD KHÔNG ĐỒNG ĐỀU ==== */
+      .product-card .relative {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9; /* ⚖️ đảm bảo ảnh luôn tỉ lệ 16:9 */
+        overflow: hidden;
+        border-radius: 0.75rem;
+      }
+
+      .product-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ảnh luôn đầy vùng mà không méo */
+        transition: transform 0.5s ease;
+      }
+
+      .product-card:hover img {
+        transform: scale(1.05); /* phóng nhẹ khi hover */
+      }
+
+      /* Đảm bảo phần nội dung dưới ảnh không bị co */
+      .product-card .p-4,
+      .product-card .p-5 {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      
+      /* ✅ [THÊM MỚI] CSS cho menu dropdown điều khiển bằng JavaScript */
+      #dropdown-menu.open {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+      }
+    </style>
+    
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <!-- 🌌 Container chứa Canvas cho hiệu ứng nền 3D luân phiên (Trang chủ) -->
+    <div id="home-background-canvas-container">
+      <canvas id="home-background-canvas"></canvas>
+    </div>
+    
+    <!-- ☄️ Hiệu ứng nền digital rain (Profile) -->
+    <div id="profile-animation" class="hidden fixed top-0 left-0 w-full h-full z-[-1]">
+      <canvas id="profile-canvas"></canvas>
+    </div>
+    
+    <!-- ❄️ Hiệu ứng tuyết rơi (Liên hệ) -->
+    <div id="contact-animation" class="hidden fixed top-0 left-0 w-full h-full z-[-1]">
+      <canvas id="contact-canvas"></canvas>
+    </div>
+
+    <!-- 🍂 Hiệu ứng lá rơi (Mã nguồn) -->
+    <div id="source-animation" class="hidden fixed top-0 left-0 w-full h-full z-[-1]">
+      <canvas id="source-canvas"></canvas>
+    </div>
+
+    <!-- ⚛️ Hiệu ứng trừu tượng (Báo cáo / Bài viết) -->
+    <div id="report-animation" class="hidden fixed top-0 left-0 w-full h-full z-[-1]">
+      <canvas id="report-canvas"></canvas>
+    </div>
+    <div id="article-animation" class="hidden fixed top-0 left-0 w-full h-full z-[-1]">
+      <canvas id="article-canvas"></canvas>
+    </div>
+
+
+    <div id="loading-overlay">
+        <canvas id="loading-canvas"></canvas>
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2 class="text-3xl font-bold tracking-widest mb-2 animated-gradient-text">AutoFusion System</h2>
+            <p id="loading-percentage" class="text-lg font-medium static-gradient-text">0% LOADING...</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="bg-gray-800 rounded-xl shadow-lg p-4 card-glow mb-8 sticky top-4 z-40 transition-all duration-300 hover:shadow-2xl" style="overflow: visible !important;">
+            <nav class="flex justify-between items-center">
+                <!-- Logo -->
+                <div class="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+                    <div class="afs-logo">AFS</div>
+                    <div>
+                        <span class="text-lg sm:text-2xl font-bold tracking-wide leading-tight animated-gradient-text">AutoFusion System</span>
+                        <p class="text-xs text-gray-400 tracking-wider -mt-1">PLC-SCADA-AI</p>
+                    </div>
+                </div>
+
+                <!-- Menu chính cho Desktop -->
+                <ul class="hidden md:flex items-center space-x-8">
+                    <li><a href="#" id="home-link" class="text-gray-400 hover:text-white font-medium transition-colors duration-300 menu-link active" onclick="navigate('home'); return false;">Trang chủ</a></li>
+                    <li><a href="#" id="source-link" class="text-gray-400 hover:text-white font-medium transition-colors duration-300 menu-link" onclick="navigate('source'); return false;">Mã nguồn</a></li>
+                    <li><a href="#" id="contact-link" class="text-gray-400 hover:text-white font-medium transition-colors duration-300 menu-link" onclick="navigate('contact'); return false;">Liên hệ</a></li>
+                    <li><a href="#" id="report-link" class="text-gray-400 hover:text-white font-medium transition-colors duration-300 menu-link" onclick="navigate('report'); return false;">Báo cáo</a></li>
+                    <li><a href="#" id="article-link" class="text-gray-400 hover:text-white font-medium transition-colors duration-300 menu-link" onclick="navigate('article'); return false;">Bài viết</a></li>
+                </ul>
+
+                <!-- Các nút bên phải -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <!-- Nút Profile (Ẩn trên mobile) -->
+                    <a href="#" id="profile-link" class="hidden md:flex items-center space-x-2 text-gray-300 hover:text-purple-300 transition-colors duration-300 menu-link p-2 rounded-full hover:bg-gray-700/50" onclick="navigate('profile'); return false;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 016 0Z" /></svg>
+                        <span class="font-medium">Profile</span>
+                    </a>
+                    
+                    <!-- Phần Đăng nhập/Đăng xuất (Ẩn trên mobile) -->
+                    <div id="auth-section" class="hidden md:flex items-center">
+                        <!-- Nội dung được tạo bởi JavaScript -->
+                    </div>
+
+                    <!-- Menu Dropdown (Hiển thị trên mọi kích thước màn hình) -->
+                    <div id="dropdown-container" class="relative">
+                        <button onclick="toggleDropdown()" class="w-10 h-10 flex items-center justify-center bg-gray-700/50 rounded-full text-gray-400 hover:text-white hover:bg-gray-600 transition-colors duration-300">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        </button>
+            
+                        <div id="dropdown-menu" class="absolute right-0 top-full mt-3 w-48 bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-lg shadow-xl opacity-0 invisible transition-all duration-300 transform -translate-y-1 z-[110]">
+                            <ul class="py-1">
+                                <!-- ✅ SỬA LỖI: Xóa class 'md:hidden' để menu hiển thị trên mọi thiết bị -->
+                                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="navigate('home'); closeDropdown(); return false;">Trang chủ</a></li>
+                                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="navigate('source'); closeDropdown(); return false;">Mã nguồn</a></li>
+                                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="navigate('contact'); closeDropdown(); return false;">Liên hệ</a></li>
+                                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="navigate('report'); closeDropdown(); return false;">Báo cáo</a></li>
+                                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="navigate('article'); closeDropdown(); return false;">Bài viết</a></li>
+                                <li><hr class="border-gray-600 my-1"></li>
+                                
+                                <!-- Link Profile -->
+                                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="navigate('profile'); closeDropdown(); return false;">Profile</a></li>
+                                
+                                <hr class="border-gray-600 my-1">
+
+                                <!-- Phần Đăng nhập/Đăng ký/Đăng xuất -->
+                                <div id="dropdown-auth-links">
+                                  <!-- Nội dung được tạo bởi JavaScript -->
+                                </div>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+
+        <div id="content-container" class="relative z-10">
+            
+            <main id="home-main" class="mt-12">
+                <div id="hero-section">
+                    <canvas id="webgl-canvas"></canvas>
+                    <div class="hero-content-wrapper grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                        <div class="text-center lg:text-left">
+                            <h1 class="text-4xl lg:text-6xl font-black mb-4 leading-tight">
+                                Nền Tảng <span class="animated-gradient-text">Tự Động Hóa</span> Toàn Diện
+                            </h1>
+                            <p class="text-lg text-gray-400 mb-8">
+                                Kết nối sức mạnh của PLC, SCADA và Trí tuệ nhân tạo (AI) để kiến tạo các giải pháp công nghiệp thông minh, hiệu quả và đột phá.
+                            </p>
+                            <button onclick="openSolutionForm()" class="mt-8 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition">
+                                Giải pháp
+                            </button>
+                        </div>
+                        <!-- 🌟 FORM KHÁM PHẢI GIẢI PHÁP -->
+                        <div id="solution-form" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                          <div class="bg-gray-800 p-8 rounded-2xl w-full max-w-md relative">
+                            <button onclick="closeSolutionForm()" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+                            <h2 class="text-2xl font-bold text-purple-400 mb-6 text-center">Đăng ký tư vấn giải pháp</h2>
+                            <form id="solutionForm" class="space-y-4">
+                              <input type="text" id="name" placeholder="Họ và tên" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                              <input type="tel" id="phone" placeholder="Số điện thoại" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                              <input type="email" id="email" placeholder="Email" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                              <input type="text" id="solution" placeholder="Giải pháp bạn quan tâm" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                              <textarea id="note" placeholder="Ghi chú thêm..." rows="3" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                              <button type="button" onclick="submitSolutionForm()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg shadow-lg">Gửi thông tin</button>
+                            </form>
+                          </div>
+                        </div>
+
+            
+                        <div id="tech-network" class="relative w-full h-[400px] lg:h-[500px]">
+                            <!-- [ĐÃ NÂNG CẤP] Toàn bộ SVG với ID đã được chuẩn hóa -->
+                            <svg class="absolute top-0 left-0 w-full h-full" style="z-index: 0;">
+                                <line id="line-plc-scada" class="tech-network-line" x1="20%" y1="20%" x2="50%" y2="50%"/>
+                                <line id="line-scada-ai" class="tech-network-line" x1="50%" y1="50%" x2="80%" y2="20%"/>
+                                <line id="line-ai-iot" class="tech-network-line" x1="80%" y1="20%" x2="80%" y2="80%"/>
+                                <line id="line-iot-plc" class="tech-network-line" x1="80%" y1="80%" x2="20%" y2="20%"/>
+                                <line id="line-robotics-scada" class="tech-network-line" x1="20%" y1="80%" x2="50%" y2="50%"/>
+                                <line id="line-robotics-iot" class="tech-network-line" x1="20%" y1="80%" x2="80%" y2="80%"/>
+                            </svg>
+            
+                            <div id="node-plc" class="tech-node" style="top: 10%; left: 10%;">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                                <span class="text-sm font-bold mt-1">PLC</span>
+                            </div>
+                            <div id="node-scada" class="tech-node" style="top: 40%; left: 40%;">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                <span class="text-sm font-bold mt-1">SCADA</span>
+                            </div>
+                            <div id="node-ai" class="tech-node" style="top: 10%; left: 70%;">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <span class="text-sm font-bold mt-1">AI</span>
+                            </div>
+                            <div id="node-robotics" class="tech-node" style="top: 70%; left: 10%;">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7.014A8.003 8.003 0 0122 12c0 3-1 7-3 9a2 2 0 11-2.828-2.828c.3-.3.546-.692.707-1.114zM12.014 2.986A8.003 8.003 0 012 12c0 3 1 7 3 9a2 2 0 112.828-2.828c-.3-.3-.546-.692-.707-1.114z"></path></svg>
+                                <span class="text-sm font-bold mt-1">Robotics</span>
+                            </div>
+                            <div id="node-iot" class="tech-node" style="top: 70%; left: 70%;">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.862 12.524 9 11.772 9 11c0-3.866-3.582-7-8-7V3c4.418 0 8 3.134 8 7 0 .772-.138 1.524-.316 2.258m10.632.084c.178-.734.316-1.486.316-2.258 0-3.866 3.582-7 8-7v-1c-4.418 0-8 3.134-8 7 0 .772.138 1.524.316 2.258m-5.316 5.492a4.5 4.5 0 01-6.364 0M17.684 18.834a4.5 4.5 0 01-6.364 0"></path></svg>
+                                <span class="text-sm font-bold mt-1">IoT</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ✅ [CẬP NHẬT] CÁC MỤC MỚI NHẤT, CHIA THEO TỪNG PHẦN -->
+
+                <!-- MÃ NGUỒN MỚI -->
+                <section id="recent-products-section" class="mt-16">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-bold static-gradient-text">Mã Nguồn Mới</h2>
+                        <a href="#" onclick="navigate('source'); return false;" class="text-purple-400 hover:text-purple-300 font-semibold transition">Xem tất cả →</a>
+                    </div>
+                    <div id="recent-products-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                        <!-- Product cards sẽ được chèn vào đây -->
+                    </div>
+                </section>
+
+                <!-- BÁO CÁO MỚI -->
+                <section id="recent-reports-section" class="mt-16">
+                    <div class="flex justify-between items-center mb-8">
+                         <h2 class="text-3xl font-bold static-gradient-text">Báo Cáo Mới</h2>
+                         <a href="#" onclick="navigate('report'); return false;" class="text-purple-400 hover:text-purple-300 font-semibold transition">Xem tất cả →</a>
+                    </div>
+                    <div id="recent-reports-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                        <!-- Report cards sẽ được chèn vào đây -->
+                    </div>
+                </section>
+
+                <!-- BÀI VIẾT MỚI -->
+                <section id="recent-articles-section" class="mt-16">
+                    <div class="flex justify-between items-center mb-8 max-w-2xl mx-auto">
+                        <h2 class="text-3xl font-bold static-gradient-text">Bài Viết Mới</h2>
+                        <a href="#" onclick="navigate('article'); return false;" class="text-purple-400 hover:text-purple-300 font-semibold transition">Xem tất cả →</a>
+                    </div>
+                    <div id="recent-articles-container" class="space-y-8 max-w-2xl mx-auto">
+                         <!-- Article posts sẽ được chèn vào đây -->
+                    </div>
+                </section>
+
+                <!-- ✅ [CẬP NHẬT] DI CHUYỂN PHẦN LIÊN HỆ XUỐNG DƯỚI CÙNG -->
+                <div id="contact-info-home" class="mt-16">
+                    <section class="bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 card-glow overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                        <h2 class="text-3xl font-bold mb-8 text-center static-gradient-text">Thông Tin Liên Hệ</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <a href="tel:0783309063" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                                <div class="text-purple-400 mb-4 group-hover:text-purple-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                </div>
+                                <span class="text-lg font-semibold text-gray-200">Số điện thoại</span>
+                                <p class="text-gray-400 mt-1">0783 309 063</p>
+                            </a>
+                            <a href="mailto:phat18870@gmail.com" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                                <div class="text-sky-400 mb-4 group-hover:text-sky-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                </div>
+                                <span class="text-lg font-semibold text-gray-200">Email</span>
+                                <p class="text-gray-400 mt-1 break-all">phat18870@gmail.com</p>
+                            </a>
+                            <a href="https://www.facebook.com/share/1BPP35skN4/?mibextid=wwXIfr" target="_blank" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                                <div class="text-blue-500 mb-4 group-hover:text-blue-400 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="currentColor"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" /></svg>
+                                </div>
+                                <span class="text-lg font-semibold text-gray-200">Facebook</span>
+                                <p class="text-gray-400 mt-1">Nguyễn Tấn Phát</p>
+                            </a>
+                            <a href="https://zalo.me/0783309063" target="_blank" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                                <div class="text-cyan-400 mb-4 group-hover:text-cyan-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg></div><span class="text-lg font-semibold text-gray-200">Zalo</span><p class="text-gray-400 mt-1">0783 309 063</p>
+                            </a>
+                        </div>
+                    </section>
+                </div>
+            </main>
+            
+            <div id="source-content" class="hidden mt-12"></div>
+            
+            <div id="contact-content" class="hidden mt-12">
+                 <section class="bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 card-glow overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                    <h2 class="text-3xl font-bold mb-8 text-center static-gradient-text">Thông Tin Liên Hệ</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <a href="tel:0783309063" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                            <div class="text-purple-400 mb-4 group-hover:text-purple-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg></div><span class="text-lg font-semibold text-gray-200">Số điện thoại</span><p class="text-gray-400 mt-1">0783 309 063</p>
+                        </a>
+                        <a href="mailto:phat18870@gmail.com" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                            <div class="text-sky-400 mb-4 group-hover:text-sky-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></div><span class="text-lg font-semibold text-gray-200">Email</span><p class="text-gray-400 mt-1 break-all">phat18870@gmail.com</p>
+                        </a>
+                        <a href="https://www.facebook.com/share/1BPP35skN4/?mibextid=wwXIfr" target="_blank" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                            <div class="text-blue-500 mb-4 group-hover:text-blue-400 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="currentColor"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg></div><span class="text-lg font-semibold text-gray-200">Facebook</span><p class="text-gray-400 mt-1">Nguyễn Tấn Phát</p>
+                        </a>
+                        <a href="https://zalo.me/0783309063" target="_blank" class="bg-gray-700/50 p-6 rounded-lg flex flex-col items-center text-center hover:bg-gray-700/80 transition-all duration-300 transform hover:-translate-y-1 group">
+                            <div class="text-cyan-400 mb-4 group-hover:text-cyan-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg></div><span class="text-lg font-semibold text-gray-200">Zalo</span><p class="text-gray-400 mt-1">0783 309 063</p>
+                        </a>
+                    </div>
+                </section>
+            </div>
+            
+            <div id="profile-content" class="hidden mt-12 space-y-12">
+                <!-- Phần Profile chính -->
+                <div id="main-profile-section">
+                    <div class="text-center py-10 text-xl text-gray-400">
+                        Đang tải dữ liệu Profile...
+                    </div>
+                </div>
+                
+                <!-- Phần Kinh nghiệm làm việc -->
+                <div id="work-experience-section">
+                    <!-- Timeline sẽ được chèn vào đây bằng JavaScript -->
+                </div>
+            </div>
+
+            <div id="report-content" class="hidden mt-12">
+                <!-- Nội dung được chèn bằng report-template -->
+            </div>
+
+            <div id="article-content" class="hidden mt-12">
+                <!-- Nội dung được chèn bằng article-template -->
+            </div>
+            
+        </div>
+
+    </div>
+
+    <div id="product-modal" class="fixed inset-0 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4" onclick="closeModal()">
+        <div id="modal-content" class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-95 opacity-0" onclick="event.stopPropagation()">
+            </div>
+    </div>
+    
+    <!-- === 🔑 MODAL ĐĂNG NHẬP / ĐĂNG KÝ (CẬP NHẬT) === -->
+    <div id="auth-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[150]">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md relative border border-gray-700">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <div class="p-8">
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-700 mb-6">
+                    <button id="login-tab" onclick="switchAuthTab('login')" class="flex-1 py-2 font-semibold text-lg border-b-2 border-purple-500 text-white">Đăng Nhập</button>
+                    <button id="register-tab" onclick="switchAuthTab('register')" class="flex-1 py-2 font-semibold text-lg border-b-2 border-transparent text-gray-500">Đăng Ký</button>
+                </div>
+                
+                <div id="auth-feedback" class="text-red-400 text-sm mb-4 text-center h-5"></div>
+
+                <!-- Login Form -->
+                <form id="login-form" class="space-y-4">
+                    <input type="text" id="login-username" placeholder="Tên người dùng" class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                    <input type="password" id="login-password" placeholder="Mật khẩu" class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                    <button type="button" onclick="handleLogin()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg shadow-lg transition">Đăng Nhập</button>
+                </form>
+
+                <!-- Register Form (Đã thêm trường Email) -->
+                <form id="register-form" class="hidden space-y-4">
+                    <input type="text" id="register-username" placeholder="Tên người dùng" class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                    <input type="email" id="register-email" placeholder="Email" class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                    <input type="password" id="register-password" placeholder="Mật khẩu" class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                    <input type="password" id="register-confirm-password" placeholder="Xác nhận mật khẩu" class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                    <button type="button" onclick="handleRegister()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition">Đăng Ký Tài Khoản</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/html" id="source-template">
+        <h1 class="text-3xl lg:text-4xl font-bold mb-8 text-center animated-gradient-text">Kho Mã Nguồn 🛠️</h1>
+          <div class="mb-8 p-4 bg-gray-700/50 rounded-xl shadow-xl">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Tìm kiếm mã nguồn theo tên sản phẩm..." 
+                    class="w-full py-3 pl-12 pr-4 text-white bg-gray-900 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-300"
+                >
+                <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+          </div>
+
+        <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div id="loading-message" class="col-span-full text-center py-10 text-xl text-gray-400">
+                Đang tải dữ liệu sản phẩm...
+            </div>
+        </div>
+    </script>
+    
+    <!-- Template cho Trang Báo cáo -->
+    <script type="text/html" id="report-template">
+        <h1 class="text-3xl lg:text-4xl font-bold mb-8 text-center animated-gradient-text">Báo Cáo & Tài Liệu</h1>
+        
+        <div id="reports-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div id="loading-report-message" class="col-span-full text-center py-10 text-xl text-gray-400">
+                Đang tải dữ liệu file báo cáo...
+            </div>
+        </div>
+    </script>
+
+    <!-- Template cho Trang Bài viết (Tương tự Facebook Post) -->
+    <script type="text/html" id="article-template">
+        <!-- Header có nút Đăng bài -->
+        <div class="flex justify-between items-center mb-8 max-w-2xl mx-auto">
+            <h1 class="text-3xl lg:text-4xl font-bold animated-gradient-text">Bảng Tin</h1>
+            <button onclick="showArticleForm()" id="showArticleFormButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-300">
+                Đăng bài mới
+            </button>
+        </div>
+        
+        <!-- 📝 KHỐI TẠO BÀI ĐĂNG MỚI (MẶC ĐỊNH BỊ ẨN) -->
+        <div id="newArticleFormContainer" class="hidden bg-gray-800/70 rounded-xl p-6 mb-8 shadow-lg border border-gray-700/50 max-w-2xl mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-200">Bạn đang nghĩ gì?</h2>
+                <button onclick="hideArticleForm()" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+            
+            <form id="articleForm" class="space-y-4">
+                <input type="text" id="articleTitle" placeholder="Tiêu đề bài viết (Không bắt buộc)" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <textarea id="articleContent" placeholder="Nội dung bài viết..." rows="4" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" required></textarea>
+                <input type="text" id="articleMediaUrl" placeholder="Link Video YouTube hoặc Hình ảnh (Không bắt buộc)" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <input type="text" id="articleAuthor" placeholder="Tên của bạn (Tùy chọn)" value="Khách" class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <button type="button" onclick="submitArticleForm()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg shadow-lg transition">
+                    Đăng bài viết
+                </button>
+            </form>
+        </div>
+
+        <!-- 📜 VÙNG CHỨA BÀI VIẾT ĐÃ ĐĂNG -->
+        <div id="articles-container" class="space-y-8 max-w-2xl mx-auto">
+            <div id="loading-article-message" class="col-span-full text-center py-10 text-xl text-gray-400">
+                Đang tải bài viết...
+            </div>
+        </div>
+    </script>
+    
+    <script>
+        let loadingAnimationId;
+        let homeLinkAnimationId;
+        let currentPage = 'home';
+        let allProducts = []; // ✅ Biến toàn cục để lưu tất cả products
+        let currentUser = null; // ✅ Biến toàn cục cho người dùng hiện tại
+        
+        // ====================================================================
+        // === 🚀 CÁC BIẾN VÀ LOGIC MỚI CHO HIỆU ỨNG NỀN TRANG CHỦ (BẮT ĐẦU) ===
+        // ====================================================================
+        let currentHomeAnimationId;
+        let currentHomeRenderer;
+        
+        // Array chứa các hàm khởi tạo 10 hiệu ứng nền mới
+        const homeBackgroundAnimations = [
+          initNebulaBackground,
+          initStarfieldBackground,
+          initGalaxyBackground,
+          initBlackHoleBackground,
+          initHyperdriveBackground,
+          initCosmicDustBackground, // ✅ Mới 6
+          initWormholeBackground,    // ✅ Mới 7
+          initSolarFlaresBackground, // ✅ Mới 8
+          initPulsatingGridBackground, // ✅ Mới 9
+          initCrystalClusterBackground // ✅ Mới 10
+        ];
+        
+        /**
+         * Hàm trợ giúp khởi tạo scene/camera/renderer cơ bản cho hiệu ứng nền 3D
+         */
+        function initBaseBackground(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return { renderer: null, animate: () => {}, getAnimationId: () => null, stop: () => {} };
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 50;
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000, 1); // Đảm bảo nền đen
+            
+            let animationId;
+            let currentClock = new THREE.Clock();
+
+            const onResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            };
+            window.addEventListener('resize', onResize);
+
+            return {
+                scene, camera, renderer, currentClock,
+                animate: () => {}, // Sẽ được override
+                getAnimationId: () => animationId,
+                setAnimationId: (id) => { animationId = id; },
+                stop: () => { 
+                    window.removeEventListener('resize', onResize); 
+                    // Dọn dẹp scene
+                    scene.traverse(object => {
+                      if (object.isMesh || object.isPoints || object.isLine) {
+                        if (object.geometry) object.geometry.dispose();
+                        if (object.material) {
+                          if (Array.isArray(object.material)) {
+                            object.material.forEach(material => material.dispose());
+                          } else {
+                            object.material.dispose();
+                          }
+                        }
+                      }
+                    });
+                    renderer.dispose();
+                }
+            };
+        }
+
+        // ===================================================================
+        // === 10 HIỆU ỨNG NỀN VŨ TRỤ MỚI VÀ ĐÃ CẬP NHẬT ======================
+        // ===================================================================
+
+        /** 🌌 Hiệu ứng 1: Tinh vân lấp lánh (Nebula) */
+        function initNebulaBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            
+            const { scene, camera, renderer, currentClock } = handler;
+            camera.position.z = 200;
+            const particleCount = 2000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const colorPalette = [0xf472b6, 0xa78bfa, 0x38bdf8, 0xfb923c]; 
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 500;
+                positions[i + 1] = (Math.random() - 0.5) * 500;
+                positions[i + 2] = (Math.random() - 0.5) * 500;
+
+                const color = new THREE.Color(colorPalette[Math.floor(Math.random() * colorPalette.length)]);
+                colors[i] = color.r;
+                colors[i + 1] = color.g;
+                colors[i + 2] = color.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                sizeAttenuation: true
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            let rotationSpeed = 0.005;
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                const elapsedTime = currentClock.getElapsedTime();
+
+                particles.rotation.y = elapsedTime * rotationSpeed;
+                particles.rotation.x = Math.sin(elapsedTime * 0.1) * 0.05;
+
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        /** ⭐ Hiệu ứng 2: Trường sao (Starfield) */
+        function initStarfieldBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const starCount = 15000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(starCount * 3);
+            
+            for (let i = 0; i < starCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 2000;
+                positions[i + 1] = (Math.random() - 0.5) * 2000;
+                positions[i + 2] = (Math.random() - 0.5) * 2000;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5 });
+            const stars = new THREE.Points(geometry, material);
+            scene.add(stars);
+            
+            camera.position.z = 1000;
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+
+                stars.rotation.x += 0.0001;
+                stars.rotation.y += 0.0001;
+                camera.position.z -= 1.5; // Tăng tốc độ bay
+
+                if (camera.position.z < -1000) {
+                   camera.position.z = 1000; // Reset
+                }
+                
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        /** 🌀 Hiệu ứng 3: Dải Ngân Hà (Galaxy) */
+        function initGalaxyBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const count = 30000; // Tăng số lượng sao
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const radius = 200;
+            const branches = 5;
+
+            for(let i=0; i < count; i++) {
+                const i3 = i * 3;
+                const r = Math.random() * radius * Math.pow(Math.random(), 3);
+                const branchAngle = (i % branches) / branches * Math.PI * 2;
+                const spinAngle = r * 0.15; // Tăng độ xoắn
+
+                positions[i3] = Math.cos(branchAngle + spinAngle) * r + (Math.random() - 0.5) * 5;
+                positions[i3+1] = (Math.random() - 0.5) * 2.5; 
+                positions[i3+2] = Math.sin(branchAngle + spinAngle) * r + (Math.random() - 0.5) * 5;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({ size: 0.3, color: 0x9f00ff, blending: THREE.AdditiveBlending });
+            const galaxy = new THREE.Points(geometry, material);
+            scene.add(galaxy);
+
+            camera.position.set(0, 80, 0); 
+            camera.lookAt(0, 0, 0);
+            
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+
+                galaxy.rotation.y += 0.005;
+                camera.position.y = 80 + Math.sin(currentClock.getElapsedTime() * 0.5) * 20; // Thêm lắc nhẹ
+                camera.lookAt(0, 0, 0);
+
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        /** ⚫ Hiệu ứng 4: Hố Đen (Black Hole) */
+        function initBlackHoleBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const particleCount = 3000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                const radius = Math.random() * 80 + 20;
+                const angle = Math.random() * Math.PI * 2;
+                positions[i] = Math.cos(angle) * radius;
+                positions[i + 1] = Math.sin(angle) * radius;
+                positions[i + 2] = (Math.random() - 0.5) * 10;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({ size: 1, color: 0xffa500, blending: THREE.AdditiveBlending });
+            const accretionDisk = new THREE.Points(geometry, material);
+            scene.add(accretionDisk);
+            
+            // Hố đen ở giữa
+            const blackHoleGeo = new THREE.SphereGeometry(15, 32, 32);
+            const blackHoleMat = new THREE.MeshBasicMaterial({ color: 0x010101 });
+            const blackHole = new THREE.Mesh(blackHoleGeo, blackHoleMat);
+            scene.add(blackHole);
+
+            camera.position.z = 120;
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                const elapsedTime = currentClock.getElapsedTime();
+                
+                // Hiệu ứng xoáy
+                const positions = accretionDisk.geometry.attributes.position.array;
+                for (let i = 0; i < particleCount * 3; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const angle = Math.atan2(y, x);
+                    const r = Math.sqrt(x * x + y * y);
+                    
+                    const newAngle = angle + 0.05 / r + elapsedTime * 0.0001;
+                    const newR = r * 0.995; 
+                    
+                    positions[i] = Math.cos(newAngle) * newR;
+                    positions[i + 1] = Math.sin(newAngle) * newR;
+                    
+                    // Reset nếu quá gần hố đen
+                    if (newR < 18) {
+                        const newRadius = Math.random() * 80 + 20;
+                        const newAngleR = Math.random() * Math.PI * 2;
+                        positions[i] = Math.cos(newAngleR) * newRadius;
+                        positions[i + 1] = Math.sin(newAngleR) * newRadius;
+                    }
+                }
+                accretionDisk.geometry.attributes.position.needsUpdate = true;
+                accretionDisk.rotation.z += 0.005;
+                blackHole.rotation.y += 0.001;
+                
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        /** 🚀 Hiệu ứng 5: Tốc độ ánh sáng (Hyperdrive) */
+        function initHyperdriveBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const lineCount = 1000; // Tăng số lượng line
+            const maxZ = -800;
+            const minZ = 0;
+            const lineLength = 20; // Tăng độ dài line
+            const lineSpeed = 15; // Tăng tốc độ
+            
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+
+            for(let i=0; i < lineCount; i++) {
+                const x = (Math.random() - 0.5) * 200;
+                const y = (Math.random() - 0.5) * 200;
+                const z = Math.random() * maxZ + minZ;
+                positions.push(x, y, z); 
+                positions.push(x, y, z - lineLength); 
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const material = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+            const lines = new THREE.LineSegments(geometry, material);
+            scene.add(lines);
+
+            camera.position.z = 0; 
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                
+                const positionsArray = lines.geometry.attributes.position.array;
+                
+                for (let i = 0; i < positionsArray.length; i += 6) {
+                    positionsArray[i + 2] += lineSpeed;
+                    positionsArray[i + 5] += lineSpeed;
+                    
+                    if (positionsArray[i + 2] > minZ) {
+                        positionsArray[i + 2] = maxZ;
+                        positionsArray[i + 5] = maxZ - lineLength;
+                    }
+                }
+                
+                lines.geometry.attributes.position.needsUpdate = true;
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+        
+        /** ✨ Hiệu ứng 6: Bụi Vũ Trụ (Cosmic Dust) - MỚI */
+        function initCosmicDustBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const dustCount = 8000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(dustCount * 3);
+            
+            for (let i = 0; i < dustCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 1000;
+                positions[i + 1] = (Math.random() - 0.5) * 1000;
+                positions[i + 2] = (Math.random() - 0.5) * 1000;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({ 
+                color: 0xffffff, 
+                size: 0.5, 
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.8
+            });
+            const dust = new THREE.Points(geometry, material);
+            scene.add(dust);
+
+            camera.position.z = 500;
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                const elapsedTime = currentClock.getElapsedTime();
+
+                dust.rotation.x += 0.0005;
+                dust.rotation.y += 0.0008;
+
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        /** 🕳️ Hiệu ứng 7: Lỗ Giun (Wormhole) - MỚI */
+        function initWormholeBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const ringCount = 100;
+            const rings = new THREE.Group();
+            
+            for (let i = 0; i < ringCount; i++) {
+                const geometry = new THREE.RingGeometry(15, 20, 32, 1);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: new THREE.Color().setHSL(i / ringCount, 1, 0.5), 
+                    side: THREE.DoubleSide, 
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const ring = new THREE.Mesh(geometry, material);
+                ring.position.z = -i * 5; // Xếp các vòng lùi dần
+                rings.add(ring);
+            }
+            scene.add(rings);
+            
+            camera.position.set(0, 0, 0);
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                
+                rings.rotation.z += 0.01;
+                
+                // Di chuyển camera như đang đi vào lỗ giun
+                camera.position.z -= 0.5;
+                
+                if (camera.position.z < rings.children[ringCount - 1].position.z) {
+                    camera.position.z = rings.children[0].position.z;
+                }
+
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        /** ☀️ Hiệu ứng 8: Bão Mặt Trời (Solar Flares) - MỚI */
+        function initSolarFlaresBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            // Mặt trời
+            const sunGeo = new THREE.SphereGeometry(30, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const sun = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(sun);
+            
+            // Quầng sáng (Flares)
+            const flareCount = 500;
+            const flareGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(flareCount * 3);
+            const sizes = new Float32Array(flareCount);
+
+            for (let i = 0; i < flareCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 35 + Math.random() * 10;
+                positions[i * 3] = Math.cos(angle) * r;
+                positions[i * 3 + 1] = Math.sin(angle) * r;
+                positions[i * 3 + 2] = 0;
+                sizes[i] = Math.random() * 5 + 1;
+            }
+            flareGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            flareGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            const flareMat = new THREE.PointsMaterial({
+                color: 0xff0000,
+                size: 5,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.7,
+                sizeAttenuation: true
+            });
+            const flares = new THREE.Points(flareGeo, flareMat);
+            scene.add(flares);
+
+            camera.position.z = 100;
+            
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                const elapsedTime = currentClock.getElapsedTime();
+                
+                flares.rotation.z += 0.005;
+                
+                const currentSizes = flares.geometry.attributes.size.array;
+                for (let i = 0; i < flareCount; i++) {
+                    currentSizes[i] = 5 + Math.sin(elapsedTime * 5 + i * 0.5) * 4;
+                }
+                flares.geometry.attributes.size.needsUpdate = true;
+                
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+        
+        /** 📐 Hiệu ứng 9: Lưới Xung (Pulsating Grid) - MỚI */
+        function initPulsatingGridBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const gridHelper = new THREE.GridHelper(200, 20, 0x00ffff, 0x0088ff);
+            gridHelper.position.y = -50;
+            scene.add(gridHelper);
+
+            const pointCount = 1000;
+            const pointGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(pointCount * 3);
+            
+            for(let i=0; i < pointCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 200;
+                positions[i * 3 + 1] = -50;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
+            }
+            pointGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const pointMat = new THREE.PointsMaterial({ color: 0xff00ff, size: 3, blending: THREE.AdditiveBlending });
+            const points = new THREE.Points(pointGeo, pointMat);
+            scene.add(points);
+
+            camera.position.set(0, 30, 80);
+            camera.lookAt(0, -50, 0);
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                const elapsedTime = currentClock.getElapsedTime();
+                
+                gridHelper.rotation.y = elapsedTime * 0.05;
+                points.rotation.y = elapsedTime * 0.05;
+
+                // Hiệu ứng nhấp nháy/xung
+                const scale = 1 + Math.sin(elapsedTime * 2) * 0.05;
+                points.material.size = 3 * scale;
+                gridHelper.material.opacity = 0.5 + Math.cos(elapsedTime * 1) * 0.3;
+
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        /** 💎 Hiệu ứng 10: Cụm Tinh Thể (Crystal Cluster) - MỚI */
+        function initCrystalClusterBackground(canvasId) {
+            const handler = initBaseBackground(canvasId);
+            if (!handler.renderer) return handler;
+            const { scene, camera, renderer, currentClock } = handler;
+            
+            const octahedronCount = 100;
+            const cluster = new THREE.Group();
+            
+            const colorPalette = [0x50c878, 0x00ffff, 0x818CF8, 0xff00ff]; // Emerald, Cyan, Purple, Magenta
+
+            for (let i = 0; i < octahedronCount; i++) {
+                const geometry = new THREE.OctahedronGeometry(Math.random() * 5 + 1);
+                const material = new THREE.MeshPhongMaterial({
+                    color: colorPalette[Math.floor(Math.random() * colorPalette.length)],
+                    specular: 0xffffff,
+                    shininess: 30,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const crystal = new THREE.Mesh(geometry, material);
+                
+                crystal.position.set(
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200
+                );
+                crystal.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
+                
+                cluster.add(crystal);
+            }
+            scene.add(cluster);
+            
+            // Thêm ánh sáng
+            const ambientLight = new THREE.AmbientLight(0x404040, 1);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+            directionalLight.position.set(50, 50, 50);
+            scene.add(directionalLight);
+            
+            camera.position.z = 100;
+
+            const animate = () => {
+                const animationId = requestAnimationFrame(animate);
+                handler.setAnimationId(animationId);
+                const elapsedTime = currentClock.getElapsedTime();
+                
+                cluster.rotation.x += 0.001;
+                cluster.rotation.y += 0.003;
+
+                // Hiệu ứng "bay" nhẹ nhàng
+                camera.position.x = Math.sin(elapsedTime * 0.1) * 10;
+                camera.position.y = Math.cos(elapsedTime * 0.1) * 10;
+                
+                renderer.render(scene, camera);
+            };
+            
+            handler.animate = animate;
+            return handler;
+        }
+
+        // ===================================================================
+        // === LOGIC START/STOP BACKGROUND (KHÔNG LUÂN PHIÊN) =================
+        // ===================================================================
+
+        /**
+         * 🔄 Chọn ngẫu nhiên và khởi động một hiệu ứng nền 3D.
+         */
+        function startHomeBackgroundSwitching() {
+            // 1. Dừng animation hiện tại (nếu có)
+            if (currentHomeRenderer) {
+                cancelAnimationFrame(currentHomeAnimationId);
+                if (currentHomeRenderer.stop) currentHomeRenderer.stop();
+                currentHomeRenderer = null;
+            }
+            
+            // 2. Chọn ngẫu nhiên một index từ 0 đến 9
+            const randomIndex = Math.floor(Math.random() * homeBackgroundAnimations.length);
+            const initFunc = homeBackgroundAnimations[randomIndex];
+
+            // 3. Khởi tạo và bắt đầu animation
+            const newHandler = initFunc('home-background-canvas');
+            if (newHandler.renderer) {
+                currentHomeRenderer = newHandler;
+                newHandler.animate();
+                currentHomeAnimationId = newHandler.getAnimationId();
+            }
+        }
+
+        /**
+         * ⏸️ Dừng hiệu ứng nền trang chủ.
+         */
+        function stopHomeBackgroundSwitching() {
+            if (currentHomeRenderer) {
+                cancelAnimationFrame(currentHomeAnimationId);
+                if (currentHomeRenderer.stop) currentHomeRenderer.stop();
+                currentHomeRenderer = null;
+                currentHomeAnimationId = null;
+            }
+        }
+        
+        // ===================================================================
+        // === LOGIC CỐ ĐỊNH CÒN LẠI (Giữ Nguyên) ============================
+        // ===================================================================
+
+        // --- UTILITIES (Giữ nguyên) ---
+        function formatCurrency(amountString) {
+            if (typeof amountString !== 'string') return amountString;
+            const amount = parseFloat(amountString.replace(/[^0-9]/g, '')); 
+            return amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+        }
+        
+        function getRatingHtml(rating) {
+            const fullStars = Math.floor(rating);
+            const halfStar = rating % 1 !== 0;
+            let html = '';
+            for (let i = 0; i < 5; i++) {
+                if (i < fullStars) {
+                    html += '<svg class="w-4 h-4 text-yellow-400 fill-current inline" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545-4.743-4.606 6.571-.955L10 2l2.877 5.984 6.571.955-4.743 4.606 1.123 6.545L10 15z"/></svg>';
+                } else if (i === fullStars && halfStar) {
+                    html += '<svg class="w-4 h-4 text-yellow-400 fill-current inline" viewBox="0 0 20 20"><path d="M10 2l2.877 5.984 6.571.955-4.743 4.606 1.123 6.545L10 15l-5.878 3.09 1.123-6.545-4.743-4.606 6.571-.955L10 2zm0 13v-13h1.716l2.366 4.908 5.253.763-3.8 3.693.901 5.163L10 15z" clip-rule="evenodd" fill-rule="evenodd"/></svg>';
+                } else {
+                    html += '<svg class="w-4 h-4 text-gray-500 fill-current inline" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545-4.743-4.606 6.571-.955L10 2l2.877 5.984 6.571.955-4.743 4.606 1.123 6.545L10 15zM10 13.5l3.197 1.684-.608-3.535 2.573-2.5-3.552-.516L10 5.625l-1.609 3.328-3.552.516 2.573 2.5-.608 3.535L10 13.5z" clip-rule="evenodd" fill-rule="evenodd"/></svg>';
+                }
+            }
+            return html;
+        }
+
+        // --- HÀM XỬ LÝ KHI CHUYỂN TRANG (ĐÃ CẬP NHẬT) ---
+
+        // ✅ [ĐÃ SỬA LỖI] Toàn bộ hàm navigate đã được thay thế
+        function _navigateLogic(page) { // << ĐỔI TÊN HÀM CỐT LÕI
+            if (page === currentPage) return;
+
+            const contents = ['home-main', 'source-content', 'contact-content', 'profile-content', 'report-content', 'article-content'];
+            const animations = ['profile-animation', 'contact-animation', 'source-animation', 'report-animation', 'article-animation']; 
+            const links = document.querySelectorAll('.menu-link');
+            
+            // Lấy tham chiếu đến container nền 3D của trang chủ
+            const homeBackgroundContainer = document.getElementById('home-background-canvas-container');
+
+            // Ẩn tất cả nội dung và các hiệu ứng nền phụ
+            contents.forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            animations.forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            
+            // Dừng tất cả các hiệu ứng đang chạy
+            stopHomeAnimation(); // Dừng Network Nodes
+            stopHomeBackgroundSwitching(); // Dừng nền 3D
+            stopProfileAnimation();
+            stopContactAnimation();
+            stopSourceAnimation();
+            stopReportAnimation();
+            stopArticleAnimation();
+
+            // Cập nhật trạng thái active cho menu link
+            links.forEach(link => link.classList.remove('active'));
+            document.getElementById(`${page}-link`)?.classList.add('active');
+
+            // Hiển thị nội dung chính của trang được chọn
+            const contentToShow = document.getElementById(`${page}-content`) || document.getElementById(`${page}-main`);
+            contentToShow?.classList.remove('hidden');
+
+            // Quyết định hiển thị hoặc ẩn hiệu ứng nền 3D của trang chủ
+            if (page === 'home') {
+                if (homeBackgroundContainer) {
+                    homeBackgroundContainer.classList.remove('hidden');
+                }
+                startHomeAnimation(); // Bắt đầu lại Network Nodes
+                startHomeBackgroundSwitching(); // Bắt đầu lại nền 3D (chọn ngẫu nhiên)
+                loadRecentUpdates(); 
+            } else {
+                // Nếu không phải trang chủ, hãy ẩn container nền 3D đi
+                if (homeBackgroundContainer) {
+                    homeBackgroundContainer.classList.add('hidden');
+                }
+
+                // Chạy các hiệu ứng nền riêng của các trang khác (nếu có)
+                if (page === 'source') {
+                     document.getElementById('source-animation')?.classList.remove('hidden');
+                     startSourceAnimation();
+                    if (!contentToShow.hasInitialized) {
+                        contentToShow.innerHTML = document.getElementById('source-template').innerHTML;
+                        contentToShow.hasInitialized = true;
+                        loadProductsData();
+                        setupSearch();
+                    }
+                } else if (page === 'contact') {
+                    document.getElementById('contact-animation')?.classList.remove('hidden');
+                     startContactAnimation();
+                } else if (page === 'profile') {
+                    document.getElementById('profile-animation')?.classList.remove('hidden');
+                    startProfileAnimation();
+                    if (!contentToShow.hasInitialized) {
+                        loadProfileData();
+                        contentToShow.hasInitialized = true;
+                    }
+                } else if (page === 'report') {
+                    document.getElementById('report-animation')?.classList.remove('hidden');
+                    startReportAnimation();
+                    if (!contentToShow.hasInitialized) {
+                        contentToShow.innerHTML = document.getElementById('report-template').innerHTML;
+                        contentToShow.hasInitialized = true;
+                        loadReportsData();
+                    }
+                } else if (page === 'article') {
+                    document.getElementById('article-animation')?.classList.remove('hidden');
+                    startArticleAnimation();
+                    if (!contentToShow.hasInitialized) {
+                        contentToShow.innerHTML = document.getElementById('article-template').innerHTML;
+                        contentToShow.hasInitialized = true;
+                    }
+                    loadArticlesData();
+                    hideArticleForm(); 
+                }
+            }
+            
+            currentPage = page;
+        }
+
+        // --- HÀM XỬ LÝ KHI NHẤN VÀO MENU (ĐÃ CẬP NHẬT: THÊM NỀN LOAD CHO MỌI CHUYỂN TRANG) ---
+        function navigate(page, isInitialLoad = false) { // << HÀM PUBLIC MỚI (TRƯỚC LÀ navigateAndLoad)
+            
+            // KHÔNG LÀM GÌ nếu cố gắng tải lại trang hiện tại VÀ KHÔNG phải là lần tải ban đầu.
+            if (page === currentPage && !isInitialLoad) {
+                return;
+            }
+            // Ngăn chặn loading lồng nhau
+             if (loadingOverlay.classList.contains('visible')) return; 
+
+            loadingOverlay.classList.add('visible');
+            startLoadingAnimation();
+            
+            // Thiết lập tốc độ load: nhanh hơn cho lần tải ban đầu
+            const maxIncrement = isInitialLoad ? 10 : 5;
+            const loadTimeMs = isInitialLoad ? 30 : 50; 
+            
+            let percentage = 0;
+            const interval = setInterval(() => {
+                percentage += Math.floor(Math.random() * maxIncrement) + 1;
+                if (percentage > 100) { percentage = 100; }
+                loadingPercentage.textContent = `${percentage}% LOADING...`;
+                
+                if (percentage === 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        loadingOverlay.classList.remove('visible');
+                        stopLoadingAnimation();
+                        loadingPercentage.textContent = `0% LOADING...`;
+                        // Gọi hàm logic chuyển trang sau khi load xong
+                        _navigateLogic(page); // << GỌI HÀM CỐT LÕI MỚI
+                    }, 500); 
+                }
+            }, loadTimeMs);
+        }
+
+        // --- LOGIC TRANG MÃ NGUỒN (Card, Modal, API - Cập nhật) ---
+        
+        function createProductCard(product) {
+          const priceOldFormatted = formatCurrency(product.PriceOld);
+          const priceNewFormatted = formatCurrency(product.PriceNew);
+
+          const priceOldVal = parseFloat(String(product.PriceOld).replace(/[^0-9]/g, '')) || 0;
+          const priceNewVal = parseFloat(String(product.PriceNew).replace(/[^0-9]/g, '')) || 0;
+          const discountPercentage = priceOldVal > priceNewVal && priceOldVal > 0
+              ? Math.round(((priceOldVal - priceNewVal) / priceOldVal) * 100)
+              : null;
+
+          const tagsHtml = Array.isArray(product.Tags)
+            ? product.Tags.map(tag =>
+                `<span class="px-2 py-0.5 text-xs font-semibold bg-purple-900/40 text-purple-300 rounded-full border border-purple-500/30">${tag}</span>`
+              ).join('')
+            : '';
+
+          return `
+          <div class="relative group bg-gray-800/70 border border-gray-700/50 rounded-2xl overflow-hidden shadow-lg hover:shadow-purple-500/30 transition-all duration-500 card-glow backdrop-blur-md flex flex-col justify-between product-card h-full">
+
+            <!-- Ảnh sản phẩm -->
+            <div class="relative overflow-hidden h-44 flex-shrink-0">
+              <img src="${product.ImageURL || 'https://via.placeholder.com/400x200.png?text=AutoFusion+Code'}"
+                  alt="${product.Title}"
+                  class="object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-700 ease-out">
+              ${
+                discountPercentage
+                  ? `<div class="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-md">${discountPercentage}% OFF</div>`
+                  : ''
+              }
+              <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            </div>
+
+            <!-- Nội dung -->
+            <div class="flex-1 flex flex-col justify-between p-5">
+              <div>
+                <h3 class="text-xl font-bold mb-2 text-white line-clamp-1 group-hover:text-purple-400 transition-colors">
+                  ${product.Title}
+                </h3>
+                <p class="text-sm text-gray-400 mb-3 line-clamp-2">${product.ShortDesc || ''}</p>
+
+                <div class="flex items-center mb-3">
+                  <div class="flex">${getRatingHtml(product.Rating)}</div>
+                  <span class="ml-2 text-sm font-semibold text-yellow-400">${product.Rating || '0'}</span>
+                  <span class="ml-1 text-xs text-gray-500">(${product.ReviewCount || '0'})</span>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mb-3">${tagsHtml}</div>
+              </div>
+
+              <!-- Footer: Giá & nút -->
+              <div class="border-t border-gray-700/40 pt-3 mt-auto flex items-center justify-between">
+                <div>
+                  ${product.PriceOld ? `<p class="text-sm text-gray-500 line-through">${priceOldFormatted}</p>` : ''}
+                  <p class="text-2xl font-black animated-gradient-text">${priceNewFormatted}</p>
+                </div>
+
+                <div class="flex gap-2">
+                  <button onclick="showDetailsModal('${product.id}')"
+                    class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow-lg transition">
+                    Xem
+                  </button>
+                  <button onclick="openRating('${product.id}', '${product.Title}')"
+                    class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold py-2 px-3 rounded-lg shadow-lg transition">
+                    ⭐
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hiệu ứng ánh sáng hover -->
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+              <div class="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-transparent to-sky-400/20 blur-2xl"></div>
+            </div>
+          </div>`;
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('search-input');
+            let timeoutId;
+            
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(timeoutId);
+                const query = e.target.value.trim().toLowerCase();
+                
+                timeoutId = setTimeout(() => {
+                    if (query === '') {
+                        displayProducts(allProducts); // Hiển thị tất cả nếu rỗng
+                    } else {
+                        const filtered = allProducts.filter(product => 
+                            product.Title.toLowerCase().includes(query)
+                        );
+                        displayProducts(filtered);
+                    }
+                }, 300); // Debounce 300ms
+            });
+        }
+
+        function displayProducts(response) {
+            const products = response;
+            const grid = document.getElementById('products-grid');
+            const loadingMessage = document.getElementById('loading-message');
+            
+            if (!grid) return; 
+
+            if (loadingMessage) { loadingMessage.remove(); }
+
+            if (Array.isArray(products) && products.length > 0) {
+                if (allProducts.length === 0) {
+                    allProducts = products;
+                }
+                const html = products.map(createProductCard).join('');
+                grid.innerHTML = html;
+            } else if (products && products.error) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi: ${products.error}. Vui lòng kiểm tra Google Sheet ID và tên trang tính.</div>`;
+            } else {
+                grid.innerHTML = '<div class="col-span-full text-center py-10 text-xl text-red-400">Không tìm thấy sản phẩm nào.</div>';
+            }
+        }
+
+        function loadProductsData() {
+            google.script.run
+                .withSuccessHandler(displayProducts)
+                .withFailureHandler(error => {
+                    const grid = document.getElementById('products-grid');
+                    if (grid) {
+                        grid.innerHTML = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi kết nối Server: ${error.message}. Vui lòng kiểm tra lại Code.gs.</div>`;
+                    }
+                })
+                .getProductsData();
+        }
+
+        function createModalContent(product) {
+            const priceOldFormatted = formatCurrency(product.PriceOld);
+            const priceNewFormatted = formatCurrency(product.PriceNew);
+            
+            const createList = (title, items) => {
+                if (!items || items.length === 0) return '';
+                const listItems = Array.isArray(items) ? items : (typeof items === 'string' ? items.split('\n') : []);
+                
+                return `
+                    <h3 class="text-xl font-semibold mt-6 mb-2 text-purple-400">${title}</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-300 pl-4">
+                        ${listItems.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                `;
+            };
+            
+            return `
+                <div class="p-6 md:p-10">
+                    <div class="flex justify-between items-start border-b border-gray-700 pb-4 mb-6">
+                        <h1 class="text-3xl font-black text-white">${product.Title}</h1>
+                        <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-1">
+                            <img src="${product.ImageURL || 'https://via.placeholder.com/400x160.png?text=AutoFusion+Code'}" alt="${product.Title}" class="w-full h-auto object-cover rounded-lg mb-4 border border-gray-700">
+                            
+                            <div class="bg-purple-900/30 p-4 rounded-lg text-center">
+                                <p class="text-sm text-gray-400">${product.PriceOld ? 'Giá gốc:' : 'Giá:'}</p>
+                                ${product.PriceOld ? `<p class="text-xl text-gray-400 line-through mb-1">${priceOldFormatted}</p>` : ''}
+                                <p class="text-4xl font-black animated-gradient-text mb-4">${priceNewFormatted}</p>
+                                
+                                <div class="space-y-3">
+                                    <button class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg">
+                                        Thêm vào giỏ hàng 🛒
+                                    </button>
+                                   <button 
+                                      class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+                                      onclick="openDemo('${product.id}')">
+                                      Xem Demo 🎬
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-semibold mb-2 text-purple-400 border-b border-gray-700 pb-2">Mô Tả Chi Tiết</h3>
+                            <p class="text-gray-400 mb-6 whitespace-pre-wrap">${product.FullDesc || product.ShortDesc}</p>
+
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div class="bg-gray-700/50 p-3 rounded-lg">
+                                    <p class="text-sm text-gray-400">Thời lượng:</p>
+                                    <p class="text-md font-bold text-white">${product.Duration || 'N/A'}</p>
+                                </div>
+                                <div class="bg-gray-700/50 p-3 rounded-lg">
+                                    <p class="text-sm text-gray-400">Cấp độ:</p>
+                                    <p class="text-md font-bold text-white">${product.Level || 'N/A'}</p>
+                                </div>
+                            </div>
+
+                            ${createList("📌 Nội dung / File đi kèm:", product.ItemsIncluded)}
+                            ${createList("📋 Yêu cầu kiến thức:", product.Requirements)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        window.showDetailsModal = function(productId) {
+            const modal = document.getElementById('product-modal');
+            const modalContent = document.getElementById('modal-content');
+            
+            modalContent.innerHTML = `<div class="p-10 text-center"><div class="loading-spinner mx-auto mb-4 w-10 h-10 border-4 border-gray-400 border-t-purple-500 rounded-full animate-spin"></div><p class="text-gray-300">Đang tải chi tiết sản phẩm ${productId}...</p></div>`;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            google.script.run
+                .withSuccessHandler(productDetails => {
+                    if (productDetails.error) {
+                        modalContent.innerHTML = `<div class="p-10 text-center text-red-400">Lỗi tải chi tiết: ${productDetails.error}</div>`;
+                    } else {
+                        modalContent.innerHTML = createModalContent(productDetails);
+                    }
+                })
+                .withFailureHandler(error => {
+                    modalContent.innerHTML = `<div class="p-10 text-center text-red-400">Lỗi kết nối: ${error.message}</div>`;
+                })
+                .getProductDetails(productId);
+        }
+        
+        window.closeModal = function() {
+            const modal = document.getElementById('product-modal');
+            const modalContent = document.getElementById('modal-content');
+            
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+                modalContent.innerHTML = '';
+            }, 300);
+        }
+        
+        // --- LOGIC TRANG BÁO CÁO (Card, API - THÊM MỚI) ---
+        
+        /**
+         * 🎨 Tạo HTML cho mỗi card Báo cáo, sử dụng card-glow.
+         */
+        function createReportCard(report) {
+            const tagsHtml = Array.isArray(report.Tags)
+                ? report.Tags.map(tag =>
+                    `<span class="px-2 py-0.5 text-xs font-semibold bg-sky-900/40 text-sky-300 rounded-full border border-sky-500/30">${tag}</span>`
+                  ).join('')
+                : '';
+            
+            // Sử dụng card-glow và áp dụng class report-card để có hiệu ứng viền điện mạnh
+            return `
+            <div onclick="openReportFile('${report.FileURL}')"
+                 class="cursor-pointer group bg-gray-800/70 border border-gray-700/50 rounded-2xl p-6 shadow-lg transition-all duration-500 card-glow report-card backdrop-blur-md flex flex-col justify-between min-h-[250px] relative overflow-hidden">
+                
+                <!-- Hiệu ứng ánh sáng nội bộ (Viền Điện) -->
+                <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10">
+                    <!-- Tạo viền rực lửa bên trong -->
+                    <div class="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-orange-500/50 transition-all duration-500 ease-in-out" 
+                         style="box-shadow: 0 0 20px rgba(249, 115, 22, 0.4), inset 0 0 10px rgba(249, 115, 22, 0.4);"></div>
+                </div>
+                
+                <div class="relative z-20 flex-1">
+                    <div class="flex items-start justify-between mb-4">
+                        <!-- Icon cho File tài liệu (Word/PDF) -->
+                        <svg class="w-10 h-10 text-sky-400 group-hover:text-sky-300 transition-colors" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15 13.5a1.5 1.5 0 11-3 0V11a.5.5 0 011 0v2.5a.5.5 0 001 0V11a1.5 1.5 0 00-3 0v2.5a1.5 1.5 0 003 0v.5zM12 18a.5.5 0 011 0v1a.5.5 0 01-1 0v-1z"/></svg>
+                        <span class="text-sm font-semibold text-gray-400">${report.Year || 'N/A'}</span>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold mb-2 text-white line-clamp-2 group-hover:text-sky-400 transition-colors">${report.Title}</h3>
+                    <p class="text-sm text-gray-400 line-clamp-3">${report.Description || 'Báo cáo chi tiết về dự án/nghiên cứu.'}</p>
+                </div>
+
+                <div class="relative z-20 mt-4 pt-3 border-t border-gray-700/50 flex flex-wrap gap-2">${tagsHtml}</div>
+            </div>`;
+        }
+
+        /**
+         * 🔄 Hiển thị danh sách báo cáo lên grid.
+         */
+        function displayReports(response) {
+            const reports = response;
+            const grid = document.getElementById('reports-grid');
+            if (!grid) return; 
+
+            const loadingMessage = document.getElementById('loading-report-message');
+            if (loadingMessage) { loadingMessage.remove(); }
+
+            if (Array.isArray(reports) && reports.length > 0) {
+                const html = reports.map(createReportCard).join('');
+                grid.innerHTML = html;
+            } else if (reports && reports.error) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi: ${reports.error}. Vui lòng kiểm tra Google Sheet ID và tên trang tính "Reports".</div>`;
+            } else {
+                grid.innerHTML = '<div class="col-span-full text-center py-10 text-xl text-gray-400">Chưa có báo cáo nào được công bố.</div>';
+            }
+        }
+
+        /**
+         * 💾 Gọi Apps Script để lấy dữ liệu Báo cáo.
+         */
+        function loadReportsData() {
+            const grid = document.getElementById('reports-grid');
+            if (grid) {
+                grid.innerHTML = `<div id="loading-report-message" class="col-span-full text-center py-10 text-xl text-gray-400">Đang tải dữ liệu báo cáo...</div>`;
+            }
+            google.script.run
+                .withSuccessHandler(displayReports)
+                .withFailureHandler(error => {
+                    if (grid) {
+                        grid.innerHTML = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi kết nối Server: ${error.message}. Vui lòng kiểm tra lại Code.gs.</div>`;
+                    }
+                })
+                .getReportsData();
+        }
+        
+        /**
+         * 🔗 Mở file Word/Doc trong tab mới.
+         */
+        window.openReportFile = function(fileUrl) {
+            if (fileUrl && typeof fileUrl === 'string' && fileUrl.trim() !== '') {
+                window.open(fileUrl, '_blank');
+            } else {
+                alert("❌ Không tìm thấy đường dẫn file.");
+            }
+        }
+        
+        // --- LOGIC TRANG BÀI VIẾT (Article) ---
+        
+        /**
+         * 🖼️ Tạo HTML cho phần Media (Ảnh/Video)
+         */
+        function createMediaHtml(mediaUrl) {
+            if (!mediaUrl || mediaUrl.trim() === '') return '';
+            mediaUrl = mediaUrl.trim();
+            
+            if (mediaUrl.includes('youtube.com/watch?v=') || mediaUrl.includes('youtu.be/')) {
+                // Xử lý link YouTube để nhúng iframe
+                const videoId = mediaUrl.match(/(?:\?v=|youtu\.be\/)([^&]+)/)?.[1];
+                if (videoId) {
+                    return `
+                        <div class="aspect-video mb-4 overflow-hidden rounded-lg">
+                            <iframe class="w-full h-full" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                    `;
+                }
+            } else if (mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i)) {
+                // Xử lý link ảnh
+                return `<img src="${mediaUrl}" alt="Media Post" class="w-full h-auto object-cover rounded-lg mb-4">`;
+            }
+            
+            return `<div class="text-sm text-gray-500 mb-4 break-all">Link Media: <a href="${mediaUrl}" target="_blank" class="text-blue-400 hover:underline">${mediaUrl}</a></div>`;
+        }
+
+        /**
+         * 📰 Tạo HTML cho mỗi Post (bài viết)
+         * ✅ ĐÃ CẬP NHẬT: Thêm nút Thích, Bình luận, Gửi.
+         */
+        function createArticlePost(article) {
+            const mediaHtml = createMediaHtml(article.MediaURL);
+            const likesCount = article.Likes ? article.Likes.toLocaleString() : 0;
+            // Lấy rowIndex đã thêm vào trong Apps Script (ví dụ: 2, 3, 4...)
+            const rowIndex = article.rowIndex; 
+
+            return `
+                <div class="bg-gray-800/70 border border-gray-700/50 rounded-xl p-5 shadow-lg flex flex-col space-y-4">
+                    <!-- Header -->
+                    <div class="flex items-center space-x-3 border-b border-gray-700/50 pb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.98 5.98 0 0010 16a5.979 5.979 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd" />
+                        </svg>
+                        <div>
+                            <p class="font-bold text-white">${article.Author || 'AutoFusion System'}</p>
+                            <p class="text-xs text-gray-400">${article.Timestamp}</p>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    ${article.Title ? `<h3 class="text-xl font-bold text-purple-300">${article.Title}</h3>` : ''}
+                    <p class="text-gray-300 whitespace-pre-wrap">${article.Content}</p>
+
+                    <!-- Media -->
+                    ${mediaHtml}
+
+                    <!-- Footer / Actions - ĐÃ CẬP NHẬT CÁC NÚT -->
+                    <div class="flex justify-between items-center text-sm text-gray-400 pt-3 border-t border-gray-700/50">
+                        <!-- Số lượt thích (cần id để cập nhật) -->
+                        <span id="likes-count-${rowIndex}" class="font-medium">${likesCount} Lượt Thích</span>
+                        
+                        <div class="flex space-x-6">
+                            <!-- NÚT THÍCH -->
+                            <button id="like-btn-${rowIndex}" onclick="handleLike(${rowIndex}, event)" class="flex items-center space-x-1 text-purple-400 hover:text-purple-300 transition-colors cursor-pointer">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10.5a1.5 1.5 0 113 0v5a1.5 1.5 0 11-3 0v-5zM6 10.333v5.432a2.5 2.5 0 001.077 2.22l.745.54a.247.247 0 00.354 0l.745-.54a2.5 2.5 0 001.077-2.22v-5.432h.001c.219-.101.4-.236.56-.445.5-.6.9-1.284 1.159-2.049.259-.766.452-1.57.549-2.433.097-.864.127-1.749.08-2.584A6.012 6.012 0 0017 4.5h-3.333A1.667 1.667 0 0012 2.833V2.5a.5.5 0 00-.5-.5h-2a.5.5 0 00-.5.5v.333a1.667 1.667 0 00-1.667 1.667v5.333z" /></svg>
+                                <span class="font-semibold">Thích</span>
+                            </button>
+
+                            <!-- NÚT BÌNH LUẬN (Chức năng placeholder) -->
+                            <button onclick="alert('Chức năng Bình luận đang được phát triển!')" class="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors cursor-pointer">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                                <span class="font-semibold">Bình luận</span>
+                            </button>
+
+                            <!-- NÚT GỬI/CHIA SẺ (Chức năng client-side) -->
+                            <button onclick="handleShare('${article.Title}', 'Hãy xem bài viết tuyệt vời này trên AutoFusion System!', window.location.href)" class="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors cursor-pointer">
+                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.862 12.524 9 11.772 9 11c0-3.866-3.582-7-8-7V3c4.418 0 8 3.134 8 7 0 .772-.138 1.524-.316 2.258m10.632.084c.178-.734.316-1.486.316-2.258 0-3.866 3.582-7 8-7v-1c-4.418 0-8 3.134-8 7 0 .772.138 1.524.316 2.258m-5.316 5.492a4.5 4.5 0 01-6.364 0M17.684 18.834a4.5 4.5 0 01-6.364 0"></path></svg>
+                                <span class="font-semibold">Gửi</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        /**
+         * 🔄 Hiển thị danh sách bài viết lên container.
+         */
+        function displayArticles(response) {
+            const articles = response;
+            const container = document.getElementById('articles-container');
+            if (!container) return; 
+
+            const loadingMessage = document.getElementById('loading-article-message');
+            if (loadingMessage) { loadingMessage.remove(); }
+
+            if (Array.isArray(articles) && articles.length > 0) {
+                const html = articles.map(createArticlePost).join('');
+                container.innerHTML = html;
+            } else if (articles && articles.error) {
+                container.innerHTML = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi: ${articles.error}. Vui lòng kiểm tra Google Sheet ID và tên trang tính "Articles".</div>`;
+            } else {
+                container.innerHTML = '<div class="col-span-full text-center py-10 text-xl text-gray-400">Chưa có bài viết nào. Hãy là người đầu tiên đăng bài!</div>';
+            }
+        }
+
+        /**
+         * 💾 Gọi Apps Script để lấy dữ liệu Bài viết.
+         */
+        function loadArticlesData() {
+            const container = document.getElementById('articles-container');
+            if (container) {
+                container.innerHTML = `<div id="loading-article-message" class="col-span-full text-center py-10 text-xl text-gray-400">Đang tải bài viết...</div>`;
+            }
+
+            google.script.run
+                .withSuccessHandler(displayArticles)
+                .withFailureHandler(error => {
+                    if (container) {
+                        container.innerHTML = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi kết nối Server: ${error.message}. Vui lòng kiểm tra lại Code.gs.</div>`;
+                    }
+                })
+                .getArticlesData();
+        }
+
+        /**
+         * 💾 Xử lý submit form đăng bài.
+         */
+        function submitArticleForm() {
+          const title = document.getElementById("articleTitle").value.trim();
+          const content = document.getElementById("articleContent").value.trim();
+          const mediaUrl = document.getElementById("articleMediaUrl").value.trim();
+          let author = document.getElementById("articleAuthor").value.trim();
+          
+          // Nếu người dùng đã đăng nhập, sử dụng tên của họ
+          if (currentUser) {
+            author = currentUser;
+          } else if (!author) { // Nếu chưa đăng nhập và bỏ trống, dùng tên mặc định
+            author = "Khách";
+          }
+          
+          const submitBtn = document.querySelector("#articleForm button[onclick='submitArticleForm()']");
+
+          if (!content) {
+            alert("⚠️ Nội dung bài viết không được để trống.");
+            return;
+          }
+
+          const info = { title, content, mediaUrl, author };
+          submitBtn.disabled = true;
+          submitBtn.innerText = "Đang đăng...";
+          
+          google.script.run
+            .withSuccessHandler((response) => {
+              alert("✅ " + response.message);
+              document.getElementById("articleForm").reset();
+              // Reset tên tác giả về giá trị mặc định tùy theo trạng thái đăng nhập
+              document.getElementById("articleAuthor").value = currentUser ? currentUser : "Khách";
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Đăng bài viết";
+              hideArticleForm();
+              loadArticlesData(); 
+            })
+            .withFailureHandler(err => {
+              alert("Lỗi khi đăng: " + err.message);
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Đăng bài viết";
+            })
+            .saveArticle(info);
+        }
+
+        /**
+         * 📝 Hiển thị Form đăng bài mới.
+         */
+        function showArticleForm() {
+            const formContainer = document.getElementById('newArticleFormContainer');
+            const showButton = document.getElementById('showArticleFormButton');
+            if (formContainer) {
+                formContainer.classList.remove('hidden');
+                 // Tự điền tên người dùng nếu đã đăng nhập
+                document.getElementById("articleAuthor").value = currentUser ? currentUser : "Khách";
+            }
+            if (showButton) {
+                 showButton.classList.add('hidden'); // Ẩn nút khi form hiện
+            }
+        }
+
+        /**
+         * 📝 Ẩn Form đăng bài mới.
+         */
+        function hideArticleForm() {
+            const formContainer = document.getElementById('newArticleFormContainer');
+            const showButton = document.getElementById('showArticleFormButton');
+            if (formContainer) {
+                formContainer.classList.add('hidden');
+                document.getElementById("articleForm").reset(); // Reset form khi ẩn
+            }
+            if (showButton) {
+                 showButton.classList.remove('hidden'); // Hiển thị nút khi form ẩn
+            }
+        }
+
+
+        // --- SCRIPT CHO HIỆU ỨNG TẢI TRANG (CONFETTI 3D - Giữ nguyên) ---
+        const startLoadingAnimation = () => {
+             if (typeof THREE === 'undefined') return;
+             const canvas = document.getElementById('loading-canvas');
+             if (!canvas) return;
+             
+             if (canvas.renderer) { canvas.renderer.dispose(); cancelAnimationFrame(loadingAnimationId); }
+
+             const scene = new THREE.Scene();
+             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+             camera.position.z = 5;
+
+             const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+             renderer.setSize(window.innerWidth, window.innerHeight);
+             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+             canvas.renderer = renderer;
+
+             const particleCount = 500;
+             const particles = [];
+             const colorPalette = [0xf472b6, 0xfb923c, 0xa78bfa, 0xfacc15, 0x4ade80];
+             const triangleGeometry = new THREE.BufferGeometry();
+             const size = 0.05;
+             const vertices = new Float32Array([0.0, size, 0.0, -size, -size, 0.0, size, -size, 0.0]);
+             triangleGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+
+             for (let i = 0; i < particleCount; i++) {
+                 const material = new THREE.MeshBasicMaterial({
+                     color: colorPalette[Math.floor(Math.random() * colorPalette.length)],
+                     side: THREE.DoubleSide
+                 });
+                 const particle = new THREE.Mesh(triangleGeometry, material);
+                 particle.position.set(
+                     (Math.random() * 10) - 10,
+                     (Math.random() - 0.5) * 10,
+                     (Math.random() - 0.5) * 4
+                 );
+                 particle.rotation.set(
+                     Math.random() * Math.PI * 2,
+                     Math.random() * Math.PI * 2,
+                     Math.random() * Math.PI * 2
+                 );
+                 particle.velocity = new THREE.Vector3(
+                     Math.random() * 0.02 + 0.02,
+                     Math.random() * 0.01 - 0.005,
+                     0
+                 );
+                 particle.rotationSpeed = new THREE.Vector3(
+                     (Math.random() - 0.5) * 0.1,
+                     (Math.random() - 0.5) * 0.1,
+                     (Math.random() - 0.5) * 0.1
+                 );
+                 particles.push(particle);
+                 scene.add(particle);
+             }
+
+             const animate = () => {
+                 loadingAnimationId = requestAnimationFrame(animate);
+                 particles.forEach(p => {
+                     p.position.add(p.velocity);
+                     p.velocity.y -= 0.0002;
+                     p.rotation.x += p.rotationSpeed.x;
+                     p.rotation.y += p.rotationSpeed.y;
+                     p.rotation.z += p.rotationSpeed.z;
+                     if (p.position.x > 10 || p.position.y < -6) {
+                         p.position.x = (Math.random() * 2) - 10;
+                         p.position.y = (Math.random() - 0.5) * 10;
+                         p.velocity.x = Math.random() * 0.02 + 0.02;
+                         p.velocity.y = Math.random() * 0.01 - 0.005;
+                     }
+                 });
+                 renderer.render(scene, camera);
+             };
+             animate();
+             window.addEventListener('resize', () => {
+                 camera.aspect = window.innerWidth / window.innerHeight;
+                 camera.updateProjectionMatrix();
+                 renderer.setSize(window.innerWidth, window.innerHeight);
+             }, false);
+        };
+
+        const stopLoadingAnimation = () => {
+             if (loadingAnimationId) {
+                 cancelAnimationFrame(loadingAnimationId);
+                 loadingAnimationId = null;
+             }
+             const canvas = document.getElementById('loading-canvas');
+             if (canvas && canvas.renderer) {
+                canvas.renderer.dispose();
+             }
+        };
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingPercentage = document.getElementById('loading-percentage');
+        
+        // --- SCRIPT KẾT HỢP: 3D BACKGROUND (TRANG CHỦ - Network Nodes) ---
+        // LƯU Ý: Đây là code cho lớp hiệu ứng trên cùng (Network Nodes)
+        let homeRenderer, homeScene, homeCamera, homeParticles, homeClock, homeMouse;
+        
+        function initHomeAnimation() {
+            if (typeof THREE === 'undefined') return;
+            const container = document.getElementById('webgl-canvas');
+            if (!container) return;
+
+            homeClock = new THREE.Clock();
+            homeMouse = new THREE.Vector2(0, 0);
+
+            homeScene = new THREE.Scene();
+            homeCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            homeCamera.position.z = 40;
+            
+            // Renderer cho Network Nodes phải trong suốt
+            homeRenderer = new THREE.WebGLRenderer({ canvas: container, antialias: true, alpha: true });
+            homeRenderer.setSize(container.clientWidth, container.clientHeight);
+            homeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const geometry = new THREE.BufferGeometry();
+            const count = 5000;
+            const positions = new Float32Array(count * 3);
+            const sizes = new Float32Array(count);
+            for (let i = 0; i < count * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 150;
+            }
+            for (let i = 0; i < count; i++) {
+                sizes[i] = Math.random() * 0.1;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0x818CF8,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true,
+                opacity: 0.8
+            });
+            homeParticles = new THREE.Points(geometry, material);
+            homeScene.add(homeParticles);
+
+            homeRenderer.animateHome = () => { 
+                homeLinkAnimationId = requestAnimationFrame(homeRenderer.animateHome);
+                
+                const elapsedTime = homeClock.getElapsedTime();
+
+                homeParticles.rotation.y = elapsedTime * 0.05;
+                homeParticles.rotation.x = elapsedTime * 0.02;
+
+                homeCamera.position.x += (homeMouse.x * 2 - homeCamera.position.x) * 0.05;
+                homeCamera.position.y += (-homeMouse.y * 2 - homeCamera.position.y) * 0.05;
+                homeCamera.lookAt(homeScene.position);
+
+
+                homeRenderer.render(homeScene, homeCamera);
+            };
+            
+            window.addEventListener('mousemove', (event) => {
+                homeMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                homeMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            });
+            window.addEventListener('resize', onHomeWindowResize);
+        }
+        
+        function onHomeWindowResize() {
+            const container = document.getElementById('webgl-canvas');
+            if (!container || !homeCamera) return;
+
+            homeCamera.aspect = container.clientWidth / container.clientHeight;
+            homeCamera.updateProjectionMatrix();
+            homeRenderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function startHomeAnimation() {
+            if (!homeRenderer) {
+                initHomeAnimation();
+                if(homeRenderer) homeRenderer.animateHome();
+            } else if (!homeLinkAnimationId) {
+                homeRenderer.animateHome();
+            }
+        }
+
+        function stopHomeAnimation() {
+            if (homeLinkAnimationId) {
+                cancelAnimationFrame(homeLinkAnimationId);
+                homeLinkAnimationId = null;
+            }
+        }
+
+        // --- HIỆU ỨNG DIGITAL RAIN (PROFILE) ---
+        let profileAnimationId;
+        let profileCanvas, profileCtx;
+        let drops = [];
+        let columns = 0;
+        const fontSize = 16;
+        const letters = 'AUTOFUSIONSYSTEM010110'.split('');
+        const colors = ['#f472b6', '#fb923c', '#a78bfa', '#facc15', '#4ade80', '#38bdf8'];
+
+        function initProfileAnimation() {
+            profileCanvas = document.getElementById('profile-canvas');
+            if (!profileCanvas) return;
+            profileCtx = profileCanvas.getContext('2d');
+
+            const setup = () => {
+                profileCanvas.width = window.innerWidth;
+                profileCanvas.height = window.innerHeight;
+                columns = Math.floor(profileCanvas.width / fontSize);
+                drops = [];
+                for (let i = 0; i < columns; i++) {
+                    drops[i] = Math.floor(Math.random() * (profileCanvas.height / fontSize));
+                }
+            };
+            setup();
+
+            function draw() {
+                profileCtx.fillStyle = 'rgba(17, 24, 39, 0.05)';
+                profileCtx.fillRect(0, 0, profileCanvas.width, profileCanvas.height);
+                profileCtx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = letters[Math.floor(Math.random() * letters.length)];
+                    profileCtx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                    profileCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > profileCanvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+            
+            function animate() {
+                draw();
+                profileAnimationId = requestAnimationFrame(animate);
+            }
+            
+            if (!profileAnimationId) {
+                animate();
+            }
+            
+            window.addEventListener('resize', setup);
+        }
+
+        function startProfileAnimation() {
+            const animationContainer = document.getElementById('profile-animation');
+            if (animationContainer && !profileAnimationId) {
+                initProfileAnimation();
+            }
+        }
+
+        function stopProfileAnimation() {
+            if (profileAnimationId) {
+                cancelAnimationFrame(profileAnimationId);
+                profileAnimationId = null;
+            }
+            if (profileCtx && profileCanvas) {
+                profileCtx.clearRect(0, 0, profileCanvas.width, profileCanvas.height);
+            }
+        }
+
+        // --- ❄️ HIỆU ỨNG TUYẾT RƠI (LIÊN HỆ) ---
+        let contactAnimationId, contactRenderer, contactScene, contactCamera, snowflakes;
+        
+        function initContactAnimation() {
+            if (typeof THREE === 'undefined') return;
+            const canvas = document.getElementById('contact-canvas');
+            if (!canvas) return;
+
+            contactScene = new THREE.Scene();
+            contactCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            contactCamera.position.z = 50;
+
+            contactRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            contactRenderer.setSize(window.innerWidth, window.innerHeight);
+
+            const snowflakeCount = 15000;
+            const positions = [];
+            const velocities = [];
+            const snowflakeGeometry = new THREE.BufferGeometry();
+
+            for (let i = 0; i < snowflakeCount; i++) {
+                positions.push(
+                    (Math.random() * 2000) - 1000,
+                    (Math.random() * 2000) - 1000,
+                    (Math.random() * 2000) - 1000
+                );
+                velocities.push(
+                    (Math.random() - 0.5) * 0.5,
+                    (Math.random() * -0.2) - 0.05,
+                    (Math.random() - 0.5) * 0.5
+                );
+            }
+
+            snowflakeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            snowflakeGeometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
+
+            const snowflakeMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 2,
+                transparent: true,
+                opacity: 0.7
+            });
+
+            snowflakes = new THREE.Points(snowflakeGeometry, snowflakeMaterial);
+            contactScene.add(snowflakes);
+
+            const animate = () => {
+                contactAnimationId = requestAnimationFrame(animate);
+                const positions = snowflakes.geometry.attributes.position.array;
+                const velocities = snowflakes.geometry.attributes.velocity.array;
+
+                for (let i = 0; i < snowflakeCount; i++) {
+                    positions[i * 3] += velocities[i * 3];
+                    positions[i * 3 + 1] += velocities[i * 3 + 1];
+                    positions[i * 3 + 2] += velocities[i * 3 + 2];
+
+                    if (positions[i * 3 + 1] < -1000) {
+                        positions[i * 3 + 1] = 1000;
+                    }
+                    if (positions[i * 3] < -1000 || positions[i * 3] > 1000) {
+                       positions[i*3] = (Math.random() * 2000) - 1000; // Reset X to a new random pos
+                    }
+                }
+                snowflakes.geometry.attributes.position.needsUpdate = true;
+                contactRenderer.render(contactScene, contactCamera);
+            };
+            animate();
+            window.addEventListener('resize', () => {
+                 contactCamera.aspect = window.innerWidth / window.innerHeight;
+                 contactCamera.updateProjectionMatrix();
+                 contactRenderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function startContactAnimation() {
+            if (!contactAnimationId) initContactAnimation();
+        }
+
+        function stopContactAnimation() {
+            if (contactAnimationId) {
+                cancelAnimationFrame(contactAnimationId);
+                contactAnimationId = null;
+            }
+        }
+
+        // --- 🍂 HIỆU ỨNG LÁ RƠI (MÃ NGUỒN) ---
+        let sourceAnimationId, sourceRenderer, sourceScene, sourceCamera, leaves;
+
+        function initSourceAnimation() {
+            if (typeof THREE === 'undefined') return;
+            const canvas = document.getElementById('source-canvas');
+            if (!canvas) return;
+
+            sourceScene = new THREE.Scene();
+            sourceCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            sourceCamera.position.z = 100;
+
+            sourceRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            sourceRenderer.setSize(window.innerWidth, window.innerHeight);
+            
+            const leafCount = 500;
+            leaves = [];
+            const leafColors = [0xcc5801, 0xe56717, 0x964000, 0x822e00, 0xd2691e];
+
+            for (let i = 0; i < leafCount; i++) {
+                const geometry = new THREE.PlaneGeometry(2, 3);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: leafColors[Math.floor(Math.random() * leafColors.length)], 
+                    side: THREE.DoubleSide 
+                });
+                const leaf = new THREE.Mesh(geometry, material);
+                leaf.position.set(
+                    (Math.random() - 0.5) * 300,
+                    (Math.random() * 150) + 150,
+                    (Math.random() - 0.5) * 200
+                );
+                leaf.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+
+                leaf.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.2,
+                    (Math.random() * -0.3) - 0.1,
+                    0
+                );
+                leaf.userData.rotationSpeed = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.02,
+                    (Math.random() - 0.5) * 0.02,
+                    (Math.random() - 0.5) * 0.02
+                );
+
+                leaves.push(leaf);
+                sourceScene.add(leaf);
+            }
+            
+            const animate = () => {
+                sourceAnimationId = requestAnimationFrame(animate);
+                leaves.forEach(leaf => {
+                    leaf.position.add(leaf.userData.velocity);
+                    leaf.rotation.x += leaf.userData.rotationSpeed.x;
+                    leaf.rotation.y += leaf.userData.rotationSpeed.y;
+                    leaf.rotation.z += leaf.userData.rotationSpeed.z;
+                    
+                    // Add a little side to side motion
+                    leaf.position.x += Math.sin(leaf.position.y * 0.1) * 0.1;
+
+                    if (leaf.position.y < -150) {
+                        leaf.position.y = 150;
+                        leaf.position.x = (Math.random() * 300) - 150;
+                    }
+                });
+                sourceRenderer.render(sourceScene, sourceCamera);
+            };
+            animate();
+            window.addEventListener('resize', () => {
+                 sourceCamera.aspect = window.innerWidth / window.innerHeight;
+                 sourceCamera.updateProjectionMatrix();
+                 sourceRenderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function startSourceAnimation() {
+            if (!sourceAnimationId) initSourceAnimation();
+        }
+
+        function stopSourceAnimation() {
+             if (sourceAnimationId) {
+                cancelAnimationFrame(sourceAnimationId);
+                sourceAnimationId = null;
+            }
+        }
+        
+        // --- ⚛️ HIỆU ỨNG MỚI (BÁO CÁO / BÀI VIẾT) ---
+        let reportAnimationId;
+        let articleAnimationId;
+        let reportAnimationHandler = {};
+        let articleAnimationHandler = {};
+
+        /**
+         * Hiệu ứng đường hầm không gian cho trang Báo Cáo.
+         */
+        function initReportAnimation(canvasId) {
+            if (typeof THREE === 'undefined') return { renderer: null, animate: () => {}, stop: () => {} };
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return { renderer: null, animate: () => {}, stop: () => {} };
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 0;
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const lineGroup = new THREE.Group();
+            const lineCount = 200;
+            const radius = 5;
+            const tunnelDepth = 200;
+            const colors = [0xff00ff, 0x00ffff]; // Magenta and Cyan
+
+            for (let i = 0; i < lineCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = radius + ((Math.random() - 0.5) * 5);
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                const z = (Math.random() - 0.5) * tunnelDepth;
+                const points = [new THREE.Vector3(x, y, z), new THREE.Vector3(x, y, z - (Math.random() * 5) - 1)];
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    linewidth: (Math.random() * 2) + 1
+                });
+                const line = new THREE.Line(geometry, material);
+                line.userData.velocity = (Math.random() * 0.5) + 0.2;
+                lineGroup.add(line);
+            }
+            scene.add(lineGroup);
+
+            let animationId;
+            const animate = () => {
+                animationId = requestAnimationFrame(animate);
+                lineGroup.children.forEach(line => {
+                    line.position.z += line.userData.velocity;
+                    if (line.position.z > camera.position.z + 10) {
+                        line.position.z = -tunnelDepth / 2 + (Math.random() * -50);
+                    }
+                });
+                renderer.render(scene, camera);
+            };
+
+            const onResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            };
+            window.addEventListener('resize', onResize);
+
+            return {
+                renderer, animate, getAnimationId: () => animationId,
+                stop: () => {
+                    cancelAnimationFrame(animationId);
+                    window.removeEventListener('resize', onResize);
+                }
+            };
+        }
+
+        /**
+         * Hiệu ứng lưới điện tử cho trang Bài Viết.
+         */
+        function initArticleAnimation(canvasId) {
+            if (typeof THREE === 'undefined') return { renderer: null, animate: () => {}, stop: () => {} };
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return { renderer: null, animate: () => {}, stop: () => {} };
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 100;
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const lineGroup = new THREE.Group();
+            scene.add(lineGroup);
+
+            const gridSize = 300;
+            const step = 20;
+            const maxLines = 150;
+            const lineLifetime = 100;
+
+            const addRandomLine = () => {
+                if (lineGroup.children.length >= maxLines) return;
+                const isHorizontal = Math.random() > 0.5;
+                const x = (Math.floor(Math.random() * (gridSize / step)) * step) - (gridSize / 2);
+                const y = (Math.floor(Math.random() * (gridSize / step)) * step) - (gridSize / 2);
+                const points = [new THREE.Vector3(x, y, 0)];
+                if (isHorizontal) {
+                    points.push(new THREE.Vector3(x + step * (Math.random() * 4 + 1), y, 0));
+                } else {
+                    points.push(new THREE.Vector3(x, y + step * (Math.random() * 4 + 1), 0));
+                }
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({ color: 0x9f00ff, transparent: true, opacity: 1.0 });
+                const line = new THREE.Line(geometry, material);
+                line.userData.life = lineLifetime;
+                lineGroup.add(line);
+            };
+
+            let animationId;
+            const animate = () => {
+                animationId = requestAnimationFrame(animate);
+                if (Math.random() > 0.7) {
+                    for (let i = 0; i < 3; i++) addRandomLine();
+                }
+                lineGroup.children.forEach((line) => {
+                    line.userData.life--;
+                    line.material.opacity = line.userData.life / lineLifetime;
+                    if (line.userData.life <= 0) {
+                        line.geometry.dispose();
+                        line.material.dispose();
+                        lineGroup.remove(line);
+                    }
+                });
+                lineGroup.rotation.z += 0.0005;
+                renderer.render(scene, camera);
+            };
+            
+            const onResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            };
+            window.addEventListener('resize', onResize);
+
+            return {
+                renderer, animate, getAnimationId: () => animationId,
+                stop: () => {
+                    cancelAnimationFrame(animationId);
+                    window.removeEventListener('resize', onResize);
+                }
+            };
+        }
+
+        function startReportAnimation() {
+            if (!reportAnimationId) {
+                reportAnimationHandler = initReportAnimation('report-canvas');
+                reportAnimationHandler.animate();
+                reportAnimationId = reportAnimationHandler.getAnimationId();
+            }
+        }
+
+        function stopReportAnimation() {
+            if (reportAnimationId) {
+                if (reportAnimationHandler.stop) reportAnimationHandler.stop();
+                reportAnimationId = null;
+                reportAnimationHandler = {};
+            }
+        }
+        
+        function startArticleAnimation() {
+             if (!articleAnimationId) {
+                articleAnimationHandler = initArticleAnimation('article-canvas');
+                articleAnimationHandler.animate();
+                articleAnimationId = articleAnimationHandler.getAnimationId();
+            }
+        }
+        
+        function stopArticleAnimation() {
+             if (articleAnimationId) {
+                if (articleAnimationHandler.stop) articleAnimationHandler.stop();
+                articleAnimationId = null;
+                articleAnimationHandler = {};
+            }
+        }
+
+        
+        // --- [ĐÃ NÂNG CẤP] HIỆU ỨNG TƯƠNG TÁC NODE (TRANG CHỦ) ---
+        const techNodes = ['plc', 'scada', 'ai', 'robotics', 'iot'];
+
+        // Định nghĩa cấu trúc mạng lưới để dễ dàng xử lý
+        const networkConnections = {
+            'plc': ['scada', 'iot'],
+            'scada': ['plc', 'ai', 'robotics'],
+            'ai': ['scada', 'iot'],
+            'robotics': ['scada', 'iot'],
+            'iot': ['plc', 'ai', 'robotics']
+        };
+
+        // Hàm highlightNetwork phiên bản nâng cấp
+        function highlightNetwork(nodeId, isHover) {
+            // 1. Highlight node chính
+            const mainNodeElement = document.getElementById(`node-${nodeId}`);
+            if (mainNodeElement) {
+                mainNodeElement.classList.toggle('highlighted', isHover);
+            }
+            
+            const connectedNodes = networkConnections[nodeId] || [];
+            
+            // 2. Highlight các node được kết nối
+            techNodes.forEach(currentNodeId => {
+                const nodeElement = document.getElementById(`node-${currentNodeId}`);
+                if (nodeElement) {
+                    if (isHover && connectedNodes.includes(currentNodeId)) {
+                        nodeElement.classList.add('connected');
+                    } else {
+                        nodeElement.classList.remove('connected');
+                    }
+                }
+            });
+
+            // 3. Tìm và highlight các đường kẻ
+            const allLines = document.querySelectorAll('.tech-network-line');
+            allLines.forEach(line => {
+                line.classList.remove('highlighted');
+                
+                if (isHover) {
+                    connectedNodes.forEach(connectedNodeId => {
+                        const id1 = `line-${nodeId}-${connectedNodeId}`;
+                        const id2 = `line-${connectedNodeId}-${nodeId}`;
+                        if (line.id === id1 || line.id === id2) {
+                            line.classList.add('highlighted');
+                        }
+                    });
+                }
+            });
+        }
+        
+        techNodes.forEach(id => {
+            const node = document.getElementById(`node-${id}`);
+            if (node) {
+                node.addEventListener('mouseenter', () => highlightNetwork(id, true));
+                node.addEventListener('mouseleave', () => highlightNetwork(id, false));
+            }
+        });
+
+        // --- KHỞI TẠO CHUNG (ĐÃ CẬP NHẬT) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Đảm bảo ẩn lớp phủ trước khi gọi navigate
+            loadingOverlay.classList.remove('visible');
+            stopLoadingAnimation();
+            
+            checkLoginStatus(); // ✅ Kiểm tra trạng thái đăng nhập khi tải trang
+            
+            // Listener để đóng dropdown khi click ra ngoài
+            document.addEventListener('click', function(event) {
+                const container = document.getElementById('dropdown-container');
+                if (container && !container.contains(event.target)) {
+                    closeDropdown();
+                }
+            });
+
+            // Tải dữ liệu cập nhật cho trang chủ khi web được mở lần đầu
+            loadRecentUpdates();
+            navigate('home', true); // << GỌI HÀM NẠP VỚI isInitialLoad=true
+        });
+        // --- NÚT XEM DEMO: MỞ LINK YOUTUBE TRONG CỘT O CỦA SHEET PRODUCTS ---
+        function openDemo(productId) {
+          google.script.run
+            .withSuccessHandler(link => {
+              if (link && typeof link === 'string' && link.trim() !== '') {
+                window.open(link, '_blank'); // mở video demo trong tab mới
+              } else {
+                alert("❌ Không tìm thấy link demo cho sản phẩm này.");
+              }
+            })
+            .withFailureHandler(err => {
+              alert("⚠️ Lỗi khi tải link demo: " + err.message);
+            })
+            .getProductDemoLink(productId);
+        }
+        // 🌟 Hiển thị / Ẩn form "Khám phá giải pháp"
+        function openSolutionForm() {
+          document.getElementById("solution-form").classList.remove("hidden");
+        }
+        function closeSolutionForm() {
+          document.getElementById("solution-form").classList.add("hidden");
+        }
+
+        // 🌟 Gửi thông tin form lên Apps Script
+        function submitSolutionForm() {
+          const name = document.getElementById("name").value.trim();
+          const phone = document.getElementById("phone").value.trim();
+          const email = document.getElementById("email").value.trim();
+          const solution = document.getElementById("solution").value.trim();
+          const note = document.getElementById("note").value.trim();
+
+          if (!name || !phone || !email) {
+            alert("⚠️ Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Email.");
+            return;
+          }
+
+          const info = { name, phone, email, solution, note };
+          google.script.run
+            .withSuccessHandler(() => {
+              alert("✅ Thông tin đã được gửi thành công!");
+              closeSolutionForm();
+              document.getElementById("solutionForm").reset();
+            })
+            .withFailureHandler(err => alert("Lỗi khi gửi: " + err.message))
+            .saveSolutionForm(info);
+      }
+      
+      // 🌟 Xử lý đánh giá sản phẩm [ĐÃ CẬP NHẬT]
+      let selectedStars = 0;
+      let currentRatingProductId = "";
+      let currentRatingProductTitle = "";
+
+      function openRating(productId, productName) {
+          currentRatingProductId = productId;
+          currentRatingProductTitle = productName;
+          selectedStars = 0;
+          document.getElementById("rating-title").innerText = `Đánh giá sản phẩm: ${productName}`;
+          document.querySelectorAll("#star-container .star").forEach(s => {
+              s.classList.remove("text-yellow-400");
+              s.classList.add("text-gray-500");
+          });
+          document.getElementById("rating-modal").classList.remove("hidden");
+      }
+
+      function closeRating() {
+        document.getElementById("rating-modal").classList.add("hidden");
+      }
+
+      function selectStar(num) {
+        selectedStars = num;
+        const stars = document.querySelectorAll("#star-container .star");
+        stars.forEach((s, i) => {
+          s.classList.toggle("text-yellow-400", i < num);
+          s.classList.toggle("text-gray-500", i >= num);
+        });
+      }
+
+      function submitRating() {
+          if (selectedStars === 0) {
+              alert("⚠️ Vui lòng chọn số sao đánh giá!");
+              return;
+          }
+
+          const ratingData = {
+              productId: currentRatingProductId,
+              stars: selectedStars
+          };
+
+          const submitBtn = document.querySelector("#rating-modal button[onclick='submitRating()']");
+          submitBtn.disabled = true;
+          submitBtn.innerText = "Đang gửi...";
+
+          google.script.run
+              .withSuccessHandler((response) => {
+                  console.log("Đánh giá đã được lưu", response);
+                  alert(`✅ Cảm ơn bạn đã đánh giá ${selectedStars} sao cho sản phẩm "${currentRatingProductTitle}"!`);
+                  closeRating();
+
+                  // Tải lại dữ liệu sản phẩm để cập nhật giao diện
+                  if (currentPage === 'source') {
+                      const grid = document.getElementById('products-grid');
+                      if(grid) {
+                        grid.innerHTML = `<div class="col-span-full text-center py-10 text-xl text-gray-400">Đang cập nhật lại dữ liệu...</div>`;
+                      }
+                      allProducts = []; // Xóa cache cũ
+                      loadProductsData();
+                  }
+              })
+              .withFailureHandler((err) => {
+                  alert("⚠️ Lỗi khi gửi đánh giá: " + err.message);
+              })
+              .saveRating(ratingData);
+
+          // Kích hoạt lại nút sau khi xử lý xong (dù thành công hay thất bại)
+          setTimeout(() => {
+            if(submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Gửi đánh giá";
+            }
+          }, 500);
+      }
+      
+      // === CÁC HÀM MỚI CHO PROFILE ===
+
+      /**
+       * 🚀 Gọi hàm getFullProfileData từ Apps Script để lấy toàn bộ dữ liệu.
+       */
+      function loadProfileData() {
+          const profileSection = document.getElementById('main-profile-section');
+          const experienceSection = document.getElementById('work-experience-section');
+
+          profileSection.innerHTML = `<div class="text-center py-10 text-xl text-gray-400">Đang tải dữ liệu Profile...</div>`;
+          experienceSection.innerHTML = ''; // Xóa nội dung cũ
+
+          google.script.run
+              .withSuccessHandler(displayFullProfile)
+              .withFailureHandler(error => {
+                  profileSection.innerHTML = `<div class="text-center py-10 text-xl text-red-400">Lỗi kết nối Server: ${error.message}</div>`;
+              })
+              .getFullProfileData(); // <-- Gọi hàm tổng hợp mới
+      }
+
+      /**
+       * 🎨 Hiển thị toàn bộ dữ liệu profile (thông tin + kinh nghiệm).
+       * @param {object} data - Đối tượng chứa { profile: {...}, experience: [...] }.
+       */
+      function displayFullProfile(data) {
+          const profileSection = document.getElementById('main-profile-section');
+          const experienceSection = document.getElementById('work-experience-section');
+
+          // Xử lý lỗi chung
+          if (data.error) {
+              profileSection.innerHTML = `<div class="text-center py-10 text-xl text-red-400">Lỗi: ${data.error}</div>`;
+              return;
+          }
+
+          // 1. Hiển thị thông tin cá nhân
+          if (data.profile && !data.profile.error) {
+              profileSection.innerHTML = createMainProfileHtml(data.profile);
+          } else {
+              profileSection.innerHTML = `<div class="text-center py-10 text-xl text-red-400">Lỗi: ${data.profile.error || 'Không thể tải thông tin cá nhân.'}</div>`;
+          }
+
+          // 2. Hiển thị kinh nghiệm làm việc
+          if (data.experience && !data.experience.error && data.experience.length > 0) {
+              experienceSection.innerHTML = createExperienceTimelineHtml(data.experience);
+          } else {
+              // Không hiển thị gì nếu không có kinh nghiệm
+              experienceSection.innerHTML = ''; 
+          }
+      }
+
+      /**
+       * 👤 Tạo HTML cho phần thông tin profile chính.
+       * @param {object} profile - Dữ liệu profile.
+       */
+      function createMainProfileHtml(profile) {
+          let socialLinksHtml = '';
+          if (profile.FacebookURL) socialLinksHtml += `<a href="${profile.FacebookURL}" target="_blank" class="text-gray-400 hover:text-blue-500 transition-colors"><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg></a>`;
+          if (profile.ZaloURL) socialLinksHtml += `<a href="${profile.ZaloURL}" target="_blank" class="text-gray-400 hover:text-cyan-400 transition-colors"><svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg></a>`;
+          if (profile.Email) socialLinksHtml += `<a href="mailto:${profile.Email}" class="text-gray-400 hover:text-sky-400 transition-colors"><svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></a>`;
+
+          // ✅ ĐÃ SỬA: Thêm `overflow-hidden` để giữ hiệu ứng glow bên trong card
+          return `
+          <section class="bg-gray-800/70 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-10 card-glow overflow-hidden transition-all duration-300 hover:shadow-2xl">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                  <div class="md:col-span-1 flex justify-center"><img src="${profile.AvatarURL || 'https://via.placeholder.com/200'}" alt="Avatar" class="w-48 h-48 rounded-full object-cover border-4 border-purple-500 shadow-lg"></div>
+                  <div class="md:col-span-2 text-center md:text-left">
+                      <h1 class="text-4xl font-black animated-gradient-text">${profile.Name || 'Chưa có tên'}</h1>
+                      <p class="text-xl text-gray-400 mt-1 mb-4">${profile.Title || 'Chưa có chức danh'}</p>
+                      <p class="text-gray-300 mb-6">${profile.Bio || 'Chưa có tiểu sử.'}</p>
+                      <div class="flex justify-center md:justify-start space-x-4">${socialLinksHtml}</div>
+                  </div>
+              </div>
+          </section>`;
+      }
+
+      /**
+       * 🏢 Tạo HTML cho timeline kinh nghiệm làm việc.
+       * @param {Array} experienceList - Mảng các đối tượng kinh nghiệm.
+       */
+      function createExperienceTimelineHtml(experienceList) {
+          const itemsHtml = experienceList.map(item => `
+              <!-- Timeline Item -->
+              <div class="relative pl-8 sm:pl-32 py-6 group">
+                  <!-- Dot on the line -->
+                  <div class="flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-600 sm:before:ml-[6.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-purple-500 after:border-4 after:box-content after:border-slate-800 after:rounded-full sm:after:ml-[6.5rem] after:-translate-x-1/2 after:translate-y-1.5">
+                      <!-- Year -->
+                      <time class="sm:absolute left-0 translate-y-0.5 inline-flex items-center justify-center text-xs font-semibold uppercase w-20 h-6 mb-3 sm:mb-0 text-purple-300 bg-purple-900/50 rounded-full">${item.Year}</time>
+                      <!-- Title and Description -->
+                      <div class="text-xl font-bold text-gray-200">${item.JobTitle}</div>
+                  </div>
+                  <div class="text-slate-400">${item.Description}</div>
+              </div>
+          `).join('');
+
+          // ✅ ĐÃ SỬA: Thêm `overflow-hidden` để giữ hiệu ứng glow bên trong card
+          return `
+          <section class="bg-gray-800/70 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-10 card-glow overflow-hidden transition-all duration-300 hover:shadow-2xl">
+              <h2 class="text-2xl font-bold mb-8 static-gradient-text">Work Experience</h2>
+              <div class="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:ml-[8.75rem] md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-600 before:to-transparent">
+                  ${itemsHtml}
+              </div>
+          </section>`;
+      }
+
+      // --- LOGIC MỚI: Thích, Bình luận, Gửi (Trang Bài viết) ---
+
+      /**
+       * Xử lý sự kiện thích bài viết.
+       * @param {number} rowIndex - Row index của bài viết trong Google Sheet.
+       * @param {Event} event - Đối tượng sự kiện.
+       */
+      window.handleLike = function(rowIndex, event) {
+          const btn = event.currentTarget;
+          const likesSpan = document.getElementById(`likes-count-${rowIndex}`);
+          
+          // Tạm thời vô hiệu hóa nút
+          btn.disabled = true;
+          // Thay đổi biểu tượng thành màu hồng (tương tự đã thích)
+          btn.classList.add('text-pink-500', 'font-bold');
+          btn.classList.remove('text-purple-400', 'hover:text-purple-300');
+
+
+          google.script.run
+              .withSuccessHandler((response) => {
+                  if (response.success) {
+                      // Cập nhật số lượt thích trên giao diện
+                      likesSpan.textContent = response.newLikes.toLocaleString() + ' Lượt Thích';
+                  }
+              })
+              .withFailureHandler((err) => {
+                  alert("⚠️ Lỗi khi thích bài viết: " + err.message);
+                  btn.classList.remove('text-pink-500', 'font-bold');
+                  btn.classList.add('text-purple-400', 'hover:text-purple-300');
+              })
+              .likeArticle(rowIndex);
+              
+          // Luôn mở lại nút sau 2 giây (giả định)
+          setTimeout(() => {
+              btn.disabled = false;
+          }, 2000); 
+      }
+
+      /**
+       * Xử lý chức năng chia sẻ (sử dụng Web Share API nếu có, hoặc fallback).
+       * @param {string} title - Tiêu đề bài viết.
+       * @param {string} text - Mô tả.
+       * @param {string} url - URL của trang web.
+       */
+      window.handleShare = function(title, text, url) {
+          if (navigator.share) {
+              // Sử dụng Web Share API (cho mobile/modern browser)
+              navigator.share({
+                  title: title,
+                  text: text,
+                  url: url,
+              }).then(() => {
+                  console.log('Shared successfully');
+              }).catch((error) => {
+                   // Fallback nếu người dùng hủy chia sẻ
+                   console.error('Error sharing', error);
+              });
+          } else {
+              // Fallback: copy link hoặc mở cửa sổ chia sẻ cơ bản
+              if (navigator.clipboard) {
+                  navigator.clipboard.writeText(url).then(() => {
+                      alert(`Đã copy link bài viết (${url}) vào clipboard!`);
+                  }).catch(err => {
+                      console.error('Không thể copy link: ', err);
+                      alert(`Link bài viết: ${url}`);
+                  });
+              } else {
+                  // Rất cũ: hiển thị alert
+                  alert(`Link bài viết: ${url}`);
+              }
+          }
+      }
+      
+      
+    // ====================================================================
+    // === 🔑 CÁC HÀM MỚI CHO TÍNH NĂNG ĐĂNG NHẬP / ĐĂNG KÝ (BẮT ĐẦU) ===
+    // ====================================================================
+    
+    // ✅ [THÊM MỚI] Hàm quản lý menu dropdown
+    function toggleDropdown() {
+        document.getElementById('dropdown-menu').classList.toggle('open');
+    }
+
+    function closeDropdown() {
+        document.getElementById('dropdown-menu').classList.remove('open');
+    }
+
+    function showFeedback(message, isError = true) {
+        const feedbackEl = document.getElementById('auth-feedback');
+        feedbackEl.textContent = message;
+        feedbackEl.className = `text-sm mb-4 text-center h-5 ${isError ? 'text-red-400' : 'text-green-400'}`;
+    }
+
+    function clearFeedback() {
+        document.getElementById('auth-feedback').textContent = '';
+    }
+
+    function openAuthModal(mode = 'login') {
+        document.getElementById('auth-modal').classList.remove('hidden');
+        switchAuthTab(mode);
+    }
+
+    function closeAuthModal() {
+        document.getElementById('auth-modal').classList.add('hidden');
+        document.getElementById('login-form').reset();
+        document.getElementById('register-form').reset();
+        clearFeedback();
+    }
+
+    function switchAuthTab(tabName) {
+        clearFeedback();
+        const loginTab = document.getElementById('login-tab');
+        const registerTab = document.getElementById('register-tab');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+
+        if (tabName === 'login') {
+            loginTab.classList.add('border-purple-500', 'text-white');
+            loginTab.classList.remove('border-transparent', 'text-gray-500');
+            registerTab.classList.add('border-transparent', 'text-gray-500');
+            registerTab.classList.remove('border-purple-500', 'text-white');
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+        } else {
+            registerTab.classList.add('border-purple-500', 'text-white');
+            registerTab.classList.remove('border-transparent', 'text-gray-500');
+            loginTab.classList.add('border-transparent', 'text-gray-500');
+            loginTab.classList.remove('border-purple-500', 'text-white');
+            registerForm.classList.remove('hidden');
+            loginForm.classList.add('hidden');
+        }
+    }
+
+    function handleRegister() {
+        const username = document.getElementById('register-username').value.trim();
+        const email = document.getElementById('register-email').value.trim();
+        const password = document.getElementById('register-password').value;
+        const confirmPassword = document.getElementById('register-confirm-password').value;
+        
+        if (!username || !email || !password) {
+            return showFeedback('Vui lòng điền đầy đủ thông tin.');
+        }
+        if (password !== confirmPassword) {
+            return showFeedback('Mật khẩu xác nhận không khớp.');
+        }
+
+        const btn = document.querySelector("#register-form button");
+        btn.disabled = true;
+        btn.textContent = "Đang xử lý...";
+        
+        google.script.run
+            .withSuccessHandler(response => {
+                btn.disabled = false;
+                btn.textContent = "Đăng Ký Tài Khoản";
+                if (response.success) {
+                    showFeedback(response.message, false);
+                    setTimeout(() => {
+                        currentUser = response.username;
+                        localStorage.setItem('loggedInUser', currentUser);
+                        updateAuthUI();
+                        closeAuthModal();
+                    }, 1000);
+                }
+            })
+            .withFailureHandler(error => {
+                btn.disabled = false;
+                btn.textContent = "Đăng Ký Tài Khoản";
+                showFeedback(error.message);
+            })
+            .registerUser({ username, email, password });
+    }
+
+    function handleLogin() {
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        if (!username || !password) {
+            return showFeedback('Vui lòng nhập đầy đủ tên người dùng và mật khẩu.');
+        }
+        
+        const btn = document.querySelector("#login-form button");
+        btn.disabled = true;
+        btn.textContent = "Đang đăng nhập...";
+
+        google.script.run
+            .withSuccessHandler(response => {
+                btn.disabled = false;
+                btn.textContent = "Đăng Nhập";
+                if (response.success) {
+                    currentUser = response.username;
+                    localStorage.setItem('loggedInUser', currentUser);
+                    updateAuthUI();
+                    closeAuthModal();
+                }
+            })
+            .withFailureHandler(error => {
+                btn.disabled = false;
+                btn.textContent = "Đăng Nhập";
+                showFeedback(error.message);
+            })
+            .loginUser({ username, password });
+    }
+
+    function handleLogout() {
+        currentUser = null;
+        localStorage.removeItem('loggedInUser');
+        updateAuthUI();
+    }
+    
+    // ✅ [CẬP NHẬT] Cập nhật giao diện cho cả thanh menu chính và menu dropdown
+    function updateAuthUI() {
+        const authSection = document.getElementById('auth-section');
+        const dropdownAuthLinks = document.getElementById('dropdown-auth-links');
+
+        if (currentUser) {
+            // Đã đăng nhập
+            authSection.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <span class="hidden md:inline text-sm font-medium text-gray-300 truncate" title="Chào, ${currentUser}">Chào, ${currentUser}</span>
+                    <button onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition flex-shrink-0">
+                        Đăng xuất
+                    </button>
+                </div>
+            `;
+            dropdownAuthLinks.innerHTML = `
+                <li><a href="#" class="block px-4 py-2 text-sm text-red-400 hover:bg-red-700 hover:text-white" onclick="handleLogout(); closeDropdown(); return false;">Đăng xuất</a></li>
+            `;
+        } else {
+            // Chưa đăng nhập
+            authSection.innerHTML = `
+                <button onclick="openAuthModal('login')" class="hidden md:flex items-center space-x-2 text-gray-300 hover:text-sky-300 transition-colors duration-300 menu-link p-2 rounded-full hover:bg-gray-700/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>
+                    <span class="font-medium">Đăng nhập</span>
+                </button>
+            `;
+            dropdownAuthLinks.innerHTML = `
+                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="openAuthModal('login'); closeDropdown(); return false;">Đăng nhập</a></li>
+                <li><a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onclick="openAuthModal('register'); closeDropdown(); return false;">Đăng ký</a></li>
+            `;
+        }
+    }
+
+    // Kiểm tra trạng thái đăng nhập khi trang vừa tải xong
+    function checkLoginStatus() {
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (loggedInUser) {
+            currentUser = loggedInUser;
+        }
+        updateAuthUI();
+    }
+    
+    // ==================================================================
+    // === 🔑 CÁC HÀM MỚI CHO TÍNH NĂNG ĐĂNG NHẬP / ĐĂNG KÝ (KẾT THÚC) ===
+    // ==================================================================
+
+    /**
+     * ✅ [HÀM MỚI] Tải và hiển thị các cập nhật mới nhất trên trang chủ.
+     */
+    function loadRecentUpdates() {
+        const productGrid = document.getElementById('recent-products-grid');
+        const reportGrid = document.getElementById('recent-reports-grid');
+        const articleContainer = document.getElementById('recent-articles-container');
+        const loadingHtml = `<div class="col-span-full text-center py-10 text-xl text-gray-400">Đang tải...</div>`;
+
+        if (productGrid) productGrid.innerHTML = loadingHtml;
+        if (reportGrid) reportGrid.innerHTML = loadingHtml;
+        if (articleContainer) articleContainer.innerHTML = loadingHtml.replace('col-span-full', '');
+
+        google.script.run
+            .withSuccessHandler(displayRecentUpdates)
+            .withFailureHandler(error => {
+                const errorHtml = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi tải dữ liệu: ${error.message}</div>`;
+                if (productGrid) productGrid.innerHTML = errorHtml;
+                if (reportGrid) reportGrid.innerHTML = errorHtml;
+                if (articleContainer) articleContainer.innerHTML = errorHtml.replace('col-span-full', '');
+            })
+            .getRecentUpdates();
+    }
+
+    /**
+     * ✅ [HÀM MỚI, ĐÃ CẬP NHẬT] Tạo giao diện cho các thẻ cập nhật bằng cách dùng lại các hàm tạo thẻ đã có.
+     */
+    function displayRecentUpdates(data) {
+        const productGrid = document.getElementById('recent-products-grid');
+        const reportGrid = document.getElementById('recent-reports-grid');
+        const articleContainer = document.getElementById('recent-articles-container');
+        
+        const noProductHtml = `<div class="col-span-full text-center py-10 text-lg text-gray-400">Chưa có mã nguồn mới.</div>`;
+        const noReportHtml = `<div class="col-span-full text-center py-10 text-lg text-gray-400">Chưa có báo cáo mới.</div>`;
+        const noArticleHtml = `<div class="text-center py-10 text-lg text-gray-400">Chưa có bài viết mới.</div>`;
+
+        if (data.error) {
+            const errorHtml = `<div class="col-span-full text-center py-10 text-xl text-red-400">Lỗi: ${data.error}</div>`;
+            if(productGrid) productGrid.innerHTML = errorHtml;
+            if(reportGrid) reportGrid.innerHTML = errorHtml;
+            if(articleContainer) articleContainer.innerHTML = errorHtml.replace('col-span-full', '');
+            return;
+        }
+
+        // Xử lý sản phẩm mới
+        if (productGrid) {
+            if (data.products && data.products.length > 0) {
+                productGrid.innerHTML = data.products.map(createProductCard).join('');
+            } else {
+                productGrid.innerHTML = noProductHtml;
+            }
+        }
+
+        // Xử lý báo cáo mới
+        if (reportGrid) {
+            if (data.reports && data.reports.length > 0) {
+                reportGrid.innerHTML = data.reports.map(createReportCard).join('');
+            } else {
+                reportGrid.innerHTML = noReportHtml;
+            }
+        }
+        
+        // Xử lý bài viết mới
+        if (articleContainer) {
+            if (data.articles && data.articles.length > 0) {
+                articleContainer.innerHTML = data.articles.map(createArticlePost).join('');
+            } else {
+                articleContainer.innerHTML = noArticleHtml;
+            }
+        }
+    }
+    </script>
+    <!-- 🌟 FORM ĐÁNH GIÁ SẢN PHẨM -->
+    <div id="rating-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div class="bg-gray-800 p-8 rounded-2xl w-full max-w-md relative text-center">
+        <button onclick="closeRating()" class="absolute top-3 right-4 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+        <h2 id="rating-title" class="text-2xl font-bold text-yellow-400 mb-6">Đánh giá sản phẩm</h2>
+        <div id="star-container" class="flex justify-center gap-3 mb-6 text-4xl">
+          <span class="star cursor-pointer text-gray-500" onclick="selectStar(1)">★</span>
+          <span class="star cursor-pointer text-gray-500" onclick="selectStar(2)">★</span>
+          <span class="star cursor-pointer text-gray-500" onclick="selectStar(3)">★</span>
+          <span class="star cursor-pointer text-gray-500" onclick="selectStar(4)">★</span>
+          <span class="star cursor-pointer text-gray-500" onclick="selectStar(5)">★</span>
+        </div>
+        <button onclick="submitRating()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg shadow-md">
+          Gửi đánh giá
+        </button>
+      </div>
+    </div>
+</body>
+</html>
